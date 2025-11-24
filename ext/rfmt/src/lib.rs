@@ -10,13 +10,16 @@ mod parser;
 mod cache;
 mod plugin;
 
-// Phase 4: Logging and debugging modules
+// Phase 4: Logging, debugging, and security modules
 mod debug;
 mod logging;
+mod policy;
 
 // Export debug macros
 #[allow(unused_imports)]
 use debug::*;
+
+use policy::SecurityPolicy;
 
 use config::Config;
 use emitter::Emitter;
@@ -25,6 +28,16 @@ use magnus::{define_module, function, prelude::*, Error, Ruby};
 use parser::{PrismAdapter, RubyParser};
 
 fn format_ruby_code(ruby: &Ruby, source: String, json: String) -> Result<String, Error> {
+    // Phase 4: Apply security policy
+    let policy = SecurityPolicy::default();
+
+    // Validate source size
+    policy
+        .validate_source_size(&source)
+        .map_err(|e| e.to_magnus_error(ruby))?;
+
+    log::debug!("Source code validated, size: {} bytes", source.len());
+
     // Parse JSON to internal AST
     let parser = PrismAdapter::new();
     let ast = parser.parse(&json).map_err(|e| e.to_magnus_error(ruby))?;

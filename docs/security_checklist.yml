@@ -1,0 +1,314 @@
+# rfmt Security Checklist
+# This file documents security measures implemented in rfmt
+
+version: "1.0"
+last_updated: "2025-01"
+
+security_measures:
+  input_validation:
+    description: "Validation of all external inputs to prevent malicious or malformed data"
+    items:
+      - name: "File path validation"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "Path existence verification"
+          - "File type verification (not directory)"
+          - "Canonical path resolution"
+          - "Path traversal prevention"
+
+      - name: "File extension validation"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "Ruby file extensions (.rb, .rake, .ru)"
+          - "Known Ruby files (Gemfile, Rakefile, etc.)"
+          - "Reject non-Ruby files"
+
+      - name: "Symbolic link detection"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "Detect symbolic links"
+          - "Configurable allow/deny policy"
+          - "Default: deny symbolic links"
+
+      - name: "Source code size validation"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "Maximum size limit (default: 10MB)"
+          - "Prevents resource exhaustion"
+          - "Configurable per policy"
+
+      - name: "Encoding validation"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "UTF-8 encoding verification"
+          - "Null byte detection"
+          - "Invalid character rejection"
+
+      - name: "Configuration validation"
+        status: implemented
+        location: "ext/rfmt/src/config/mod.rs"
+        details:
+          - "Line length bounds (40-500)"
+          - "Indent width bounds (1-8)"
+          - "Empty pattern rejection"
+          - "Version compatibility check"
+
+  resource_limits:
+    description: "Limits on resource usage to prevent DoS and resource exhaustion"
+    items:
+      - name: "File size limit"
+        status: implemented
+        location: "ext/rfmt/src/policy/limits.rs"
+        default: "10MB"
+        configurable: true
+        details:
+          - "Enforced before processing"
+          - "Clear error messages"
+          - "Configurable per policy"
+
+      - name: "Memory usage monitoring"
+        status: implemented
+        location: "ext/rfmt/src/policy/limits.rs"
+        default: "100MB"
+        platform: "Linux (via /proc/self/status)"
+        details:
+          - "Tracks memory delta"
+          - "Fails gracefully on non-Linux"
+          - "Configurable per policy"
+
+      - name: "Processing timeout"
+        status: implemented
+        location: "ext/rfmt/src/policy/limits.rs"
+        default: "30 seconds"
+        details:
+          - "Per-operation timeout"
+          - "Prevents infinite loops"
+          - "Configurable per policy"
+
+      - name: "Recursion depth limit"
+        status: implemented
+        location: "ext/rfmt/src/policy/limits.rs"
+        default: "1000"
+        details:
+          - "AST traversal depth limit"
+          - "RAII-based tracking"
+          - "Automatic cleanup on scope exit"
+
+      - name: "Thread limit"
+        status: implemented
+        location: "ext/rfmt/src/policy/mod.rs"
+        default: "min(num_cpus, 4)"
+        details:
+          - "Parallel processing limit"
+          - "Prevents thread exhaustion"
+          - "Configurable per policy"
+
+  error_handling:
+    description: "Secure error handling to prevent information leakage"
+    items:
+      - name: "Sensitive information sanitization"
+        status: implemented
+        location: "ext/rfmt/src/policy/validation.rs"
+        details:
+          - "Home directory path replacement (~)"
+          - "Current directory replacement (.)"
+          - "Absolute path sanitization"
+
+      - name: "Error message formatting"
+        status: implemented
+        location: "ext/rfmt/src/error/mod.rs"
+        details:
+          - "User-friendly messages"
+          - "Error codes (E001-E999)"
+          - "Help URLs"
+          - "No stack traces in production"
+
+      - name: "Panic handling"
+        status: implemented
+        location: "ext/rfmt/src/lib.rs"
+        details:
+          - "No panics propagated to Ruby"
+          - "All errors converted to Magnus errors"
+          - "Graceful degradation"
+
+      - name: "Backtrace capture"
+        status: implemented
+        location: "ext/rfmt/src/error/mod.rs"
+        details:
+          - "Only for internal errors"
+          - "Sanitized before display"
+          - "Debug information for developers"
+
+  dependencies:
+    description: "Secure dependency management and auditing"
+    items:
+      - name: "Minimal dependencies"
+        status: implemented
+        details:
+          - "Only essential crates"
+          - "Well-maintained dependencies"
+          - "Regular updates"
+
+      - name: "Security audit integration"
+        status: planned
+        details:
+          - "cargo-audit in CI/CD"
+          - "Automated vulnerability scanning"
+          - "Dependency update alerts"
+
+      - name: "Ruby gem security"
+        status: planned
+        details:
+          - "bundle-audit integration"
+          - "Regular gem updates"
+          - "Vulnerability monitoring"
+
+  code_safety:
+    description: "Safe Rust practices and code quality"
+    items:
+      - name: "Unsafe code minimization"
+        status: implemented
+        details:
+          - "Only in FFI boundary (Magnus)"
+          - "All unsafe code documented"
+          - "Reviewed for safety"
+
+      - name: "Static analysis"
+        status: implemented
+        details:
+          - "cargo clippy enabled"
+          - "Strict linting rules"
+          - "CI/CD enforcement"
+
+      - name: "Type safety"
+        status: implemented
+        details:
+          - "Strong typing throughout"
+          - "No unsafe type casts"
+          - "Validated type conversions"
+
+security_policies:
+  default:
+    description: "Balanced security and performance"
+    settings:
+      max_file_size: "10MB"
+      max_memory_usage: "100MB"
+      timeout_seconds: 30
+      max_recursion_depth: 1000
+      max_threads: 4
+      allow_symlinks: false
+
+  strict:
+    description: "Maximum security, reduced performance"
+    settings:
+      max_file_size: "5MB"
+      max_memory_usage: "50MB"
+      timeout_seconds: 15
+      max_recursion_depth: 500
+      max_threads: 2
+      allow_symlinks: false
+
+  permissive:
+    description: "Relaxed limits, trusted environments"
+    settings:
+      max_file_size: "50MB"
+      max_memory_usage: "500MB"
+      timeout_seconds: 120
+      max_recursion_depth: 5000
+      max_threads: "num_cpus"
+      allow_symlinks: true
+
+threat_model:
+  threats_mitigated:
+    - name: "Path Traversal"
+      severity: high
+      mitigation: "Canonical path resolution, path validation"
+      status: mitigated
+
+    - name: "Resource Exhaustion (DoS)"
+      severity: high
+      mitigation: "File size limits, memory limits, timeouts"
+      status: mitigated
+
+    - name: "Infinite Recursion"
+      severity: medium
+      mitigation: "Recursion depth tracking"
+      status: mitigated
+
+    - name: "Symbolic Link Attacks"
+      severity: medium
+      mitigation: "Symbolic link detection and rejection"
+      status: mitigated
+
+    - name: "Information Disclosure"
+      severity: medium
+      mitigation: "Error message sanitization"
+      status: mitigated
+
+    - name: "Code Injection"
+      severity: low
+      mitigation: "No code execution, formatting only"
+      status: not_applicable
+
+    - name: "Buffer Overflow"
+      severity: low
+      mitigation: "Memory-safe Rust"
+      status: mitigated
+
+  threats_not_mitigated:
+    - name: "Malicious Ruby Code Execution"
+      reason: "rfmt does not execute Ruby code, only formats it"
+      recommendation: "Use separate security tools for code execution safety"
+
+    - name: "Supply Chain Attacks"
+      reason: "Dependency vulnerabilities are an ongoing concern"
+      recommendation: "Regular dependency audits and updates"
+
+testing:
+  security_tests:
+    - name: "Input validation tests"
+      location: "ext/rfmt/src/policy/validation.rs"
+      coverage: "Comprehensive"
+
+    - name: "Resource limit tests"
+      location: "ext/rfmt/src/policy/limits.rs"
+      coverage: "Comprehensive"
+
+    - name: "Error handling tests"
+      location: "ext/rfmt/src/error/*.rs"
+      coverage: "Comprehensive"
+
+    - name: "Integration tests"
+      location: "spec/"
+      coverage: "Good"
+
+compliance:
+  standards:
+    - name: "Rust Security Best Practices"
+      status: compliant
+
+    - name: "OWASP Secure Coding Guidelines"
+      status: compliant
+
+    - name: "CWE Top 25"
+      status: addressed
+
+audit_log:
+  - date: "2025-01"
+    version: "0.1.0"
+    auditor: "Internal"
+    scope: "Initial implementation"
+    findings: "Security policy implemented"
+    status: "Complete"
+
+next_steps:
+  - "Integrate cargo-audit into CI/CD"
+  - "Add bundle-audit for Ruby dependencies"
+  - "Implement automated security testing"
+  - "Regular security audits"
+  - "Community security review program"

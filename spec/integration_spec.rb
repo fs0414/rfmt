@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require "spec_helper"
+require 'spec_helper'
 
-RSpec.describe "Prism to Rust integration" do
-  describe "end-to-end parsing" do
-    it "parses simple Ruby code through the full pipeline" do
+RSpec.describe 'Prism to Rust integration' do
+  describe 'end-to-end parsing' do
+    it 'parses simple Ruby code through the full pipeline' do
       source = "puts 'hello'"
 
       # Step 1: Ruby Prism parsing
@@ -13,12 +13,12 @@ RSpec.describe "Prism to Rust integration" do
 
       # Verify JSON structure
       parsed = JSON.parse(prism_json)
-      expect(parsed["node_type"]).to eq("program_node")
-      expect(parsed).to have_key("location")
-      expect(parsed).to have_key("children")
+      expect(parsed['node_type']).to eq('program_node')
+      expect(parsed).to have_key('location')
+      expect(parsed).to have_key('children')
     end
 
-    it "handles class definitions" do
+    it 'handles class definitions' do
       source = <<~RUBY
         class User
           def name
@@ -30,14 +30,14 @@ RSpec.describe "Prism to Rust integration" do
       prism_json = Rfmt::PrismBridge.parse(source)
       parsed = JSON.parse(prism_json)
 
-      expect(parsed["node_type"]).to eq("program_node")
+      expect(parsed['node_type']).to eq('program_node')
 
-      class_node = parsed["children"].first
-      expect(class_node["node_type"]).to eq("class_node")
-      expect(class_node["metadata"]["name"]).to eq("User")
+      class_node = parsed['children'].first
+      expect(class_node['node_type']).to eq('class_node')
+      expect(class_node['metadata']['name']).to eq('User')
     end
 
-    it "preserves location information" do
+    it 'preserves location information' do
       source = <<~RUBY
         class Foo
           def bar
@@ -49,40 +49,40 @@ RSpec.describe "Prism to Rust integration" do
       prism_json = Rfmt::PrismBridge.parse(source)
       parsed = JSON.parse(prism_json)
 
-      class_node = parsed["children"].first
-      expect(class_node["location"]["start_line"]).to eq(1)
-      expect(class_node["location"]["end_line"]).to be > 1
-      expect(class_node["formatting"]["multiline"]).to be true
+      class_node = parsed['children'].first
+      expect(class_node['location']['start_line']).to eq(1)
+      expect(class_node['location']['end_line']).to be > 1
+      expect(class_node['formatting']['multiline']).to be true
     end
 
-    it "handles method definitions with parameters" do
-      source = "def hello(name, age) end"
+    it 'handles method definitions with parameters' do
+      source = 'def hello(name, age) end'
 
       prism_json = Rfmt::PrismBridge.parse(source)
       parsed = JSON.parse(prism_json)
 
-      def_node = parsed["children"].first
-      expect(def_node["node_type"]).to eq("def_node")
-      expect(def_node["metadata"]["name"]).to eq("hello")
+      def_node = parsed['children'].first
+      expect(def_node['node_type']).to eq('def_node')
+      expect(def_node['metadata']['name']).to eq('hello')
       # Parameters are in children
-      expect(def_node["children"].length).to be > 0
+      expect(def_node['children'].length).to be > 0
     end
 
-    it "handles various literal types" do
+    it 'handles various literal types' do
       literals = {
-        '"string"' => "string_node",
-        "42" => "integer_node",
-        "3.14" => "float_node",
-        "[1, 2, 3]" => "array_node",
-        "{ a: 1 }" => "hash_node"
+        '"string"' => 'string_node',
+        '42' => 'integer_node',
+        '3.14' => 'float_node',
+        '[1, 2, 3]' => 'array_node',
+        '{ a: 1 }' => 'hash_node'
       }
 
       literals.each do |source, expected_type|
         prism_json = Rfmt::PrismBridge.parse(source)
         parsed = JSON.parse(prism_json)
 
-        node = parsed["children"].first
-        expect(node["node_type"]).to eq(expected_type), "Expected #{source} to produce #{expected_type}"
+        node = parsed['children'].first
+        expect(node['node_type']).to eq(expected_type), "Expected #{source} to produce #{expected_type}"
       end
     end
   end

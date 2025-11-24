@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 RSpec.describe 'Rfmt New API' do
@@ -9,8 +11,8 @@ RSpec.describe 'Rfmt New API' do
     end
 
     it 'handles empty input' do
-      result = Rfmt.format("")
-      expect(result).to eq("")
+      result = Rfmt.format('')
+      expect(result).to eq('')
     end
 
     it 'handles multiline code' do
@@ -19,11 +21,11 @@ RSpec.describe 'Rfmt New API' do
       expect(result).to eq(source) # Phase 1: 入力をそのまま返す
     end
   end
-  
+
   describe '.rust_version' do
     it 'returns version string' do
       version = Rfmt.rust_version
-      expect(version).to eq("0.1.0 (Rust)")
+      expect(version).to eq('0.1.0 (Rust)')
     end
   end
 end

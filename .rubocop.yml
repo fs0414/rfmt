@@ -1,0 +1,25 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  Exclude:
+    - 'vendor/**/*'
+    - 'spec/fixtures/**/*'
+
+# RSpec files often have large describe/context blocks
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+# Allow constants in RSpec test files
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+# Show diff method is intentionally verbose for debugging
+Metrics/AbcSize:
+  Exclude:
+    - 'spec/snapshot_spec.rb'
+
+Metrics/MethodLength:
+  Exclude:
+    - 'spec/snapshot_spec.rb'

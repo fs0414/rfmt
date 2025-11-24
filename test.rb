@@ -1,9 +1,7 @@
 require 'rfmt'
 
-# バージョン確認
 puts "rfmt version: #{Rfmt::VERSION}"
 
-# コードフォーマットのテスト
 code = <<~RUBY
   class MyClass
   def hello

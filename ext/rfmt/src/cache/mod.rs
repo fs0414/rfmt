@@ -31,7 +31,11 @@ impl FormatCache {
     }
 
     /// Get cached formatted result
-    pub fn get_formatted(&mut self, file_hash: FileHash, config_hash: ConfigHash) -> Option<&String> {
+    pub fn get_formatted(
+        &mut self,
+        file_hash: FileHash,
+        config_hash: ConfigHash,
+    ) -> Option<&String> {
         self.format_cache.get(&(file_hash, config_hash))
     }
 

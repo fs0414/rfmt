@@ -57,9 +57,7 @@ impl Emitter {
     /// Emit comments that appear before a given line
     fn emit_comments_before(&mut self, line: usize, indent_level: usize) -> Result<()> {
         let indent_str = match self.config.formatting.indent_style {
-            IndentStyle::Spaces => {
-                " ".repeat(self.config.formatting.indent_width * indent_level)
-            }
+            IndentStyle::Spaces => " ".repeat(self.config.formatting.indent_width * indent_level),
             IndentStyle::Tabs => "\t".repeat(indent_level),
         };
 
@@ -174,7 +172,11 @@ impl Emitter {
         }
 
         // Add newline before end if there was body content
-        if node.children.iter().any(|c| !self.is_structural_node(&c.node_type)) {
+        if node
+            .children
+            .iter()
+            .any(|c| !self.is_structural_node(&c.node_type))
+        {
             self.buffer.push('\n');
         }
 
@@ -207,7 +209,11 @@ impl Emitter {
         }
 
         // Add newline before end if there was body content
-        if node.children.iter().any(|c| !self.is_structural_node(&c.node_type)) {
+        if node
+            .children
+            .iter()
+            .any(|c| !self.is_structural_node(&c.node_type))
+        {
             self.buffer.push('\n');
         }
 
@@ -231,10 +237,19 @@ impl Emitter {
 
         // TODO: Handle parameters properly
         // For now, extract from source if method has parameters
-        if node.metadata.get("parameters_count").and_then(|s| s.parse::<usize>().ok()).unwrap_or(0) > 0 {
+        if node
+            .metadata
+            .get("parameters_count")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(0)
+            > 0
+        {
             // Extract parameter part from source
             if !self.source.is_empty() && node.location.end_offset <= self.source.len() {
-                if let Some(source_text) = self.source.get(node.location.start_offset..node.location.end_offset) {
+                if let Some(source_text) = self
+                    .source
+                    .get(node.location.start_offset..node.location.end_offset)
+                {
                     // Find parameters in source (between def name and \n or ;)
                     if let Some(def_line) = source_text.lines().next() {
                         if let Some(params_start) = def_line.find('(') {
@@ -259,7 +274,11 @@ impl Emitter {
         }
 
         // Add newline before end if there was body content
-        if node.children.iter().any(|c| !self.is_structural_node(&c.node_type)) {
+        if node
+            .children
+            .iter()
+            .any(|c| !self.is_structural_node(&c.node_type))
+        {
             self.buffer.push('\n');
         }
 
@@ -296,9 +315,7 @@ impl Emitter {
     /// Emit indentation
     fn emit_indent(&mut self, level: usize) -> Result<()> {
         let indent_str = match self.config.formatting.indent_style {
-            IndentStyle::Spaces => {
-                " ".repeat(self.config.formatting.indent_width * level)
-            }
+            IndentStyle::Spaces => " ".repeat(self.config.formatting.indent_width * level),
             IndentStyle::Tabs => "\t".repeat(level),
         };
 

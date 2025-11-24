@@ -1,42 +1,40 @@
 // Core modules
 mod ast;
-mod parser;
 mod config;
-mod formatter;
 mod emitter;
 mod error;
+mod formatter;
+mod parser;
 
 // Optional modules
 mod cache;
 mod plugin;
 
 // Phase 4: Logging and debugging modules
-mod logging;
 mod debug;
+mod logging;
 
 // Export debug macros
 #[allow(unused_imports)]
 use debug::*;
 
+use config::Config;
+use emitter::Emitter;
+use formatter::Formatter;
 use magnus::{define_module, function, prelude::*, Error, Ruby};
 use parser::{PrismAdapter, RubyParser};
-use formatter::Formatter;
-use emitter::Emitter;
-use config::Config;
 
 fn format_ruby_code(ruby: &Ruby, source: String, json: String) -> Result<String, Error> {
     // Parse JSON to internal AST
     let parser = PrismAdapter::new();
-    let ast = parser.parse(&json)
-        .map_err(|e| e.to_magnus_error(ruby))?;
+    let ast = parser.parse(&json).map_err(|e| e.to_magnus_error(ruby))?;
 
     // Create emitter with source code for fallback extraction
     let config = Config::default();
     let mut emitter = Emitter::with_source(config, source);
 
     // Emit formatted code
-    let formatted = emitter.emit(&ast)
-        .map_err(|e| e.to_magnus_error(ruby))?;
+    let formatted = emitter.emit(&ast).map_err(|e| e.to_magnus_error(ruby))?;
 
     Ok(formatted)
 }
@@ -47,8 +45,7 @@ fn parse_to_json(ruby: &Ruby, source: String) -> Result<String, Error> {
     // This function expects JSON input from Ruby's PrismBridge
     // and returns the parsed AST as a debug string
     let parser = PrismAdapter::new();
-    let ast = parser.parse(&source)
-        .map_err(|e| e.to_magnus_error(ruby))?;
+    let ast = parser.parse(&source).map_err(|e| e.to_magnus_error(ruby))?;
 
     // For now, return debug representation
     // In Phase 2, we might want to serialize back to JSON

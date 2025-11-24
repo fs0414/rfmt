@@ -165,8 +165,14 @@ mod tests {
     fn test_recovery_strategies() {
         let strategies = vec![
             (RecoveryStrategy::Skip, Some(String::new())),
-            (RecoveryStrategy::PreserveOriginal, Some(String::from("/* preserved */"))),
-            (RecoveryStrategy::MinimalFormat, Some(String::from("/* minimal */"))),
+            (
+                RecoveryStrategy::PreserveOriginal,
+                Some(String::from("/* preserved */")),
+            ),
+            (
+                RecoveryStrategy::MinimalFormat,
+                Some(String::from("/* minimal */")),
+            ),
             (RecoveryStrategy::Abort, None),
         ];
 

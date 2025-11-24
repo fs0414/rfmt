@@ -112,10 +112,7 @@ impl NodeType {
 
     /// Check if this node type is a definition (class, module, def)
     pub fn is_definition(&self) -> bool {
-        matches!(
-            self,
-            Self::ClassNode | Self::ModuleNode | Self::DefNode
-        )
+        matches!(self, Self::ClassNode | Self::ModuleNode | Self::DefNode)
     }
 
     /// Check if this node type requires a newline after
@@ -253,8 +250,7 @@ mod tests {
     #[test]
     fn test_node_with_children() {
         let child = Node::new(NodeType::ClassNode, Location::zero());
-        let node = Node::new(NodeType::ProgramNode, Location::zero())
-            .with_children(vec![child]);
+        let node = Node::new(NodeType::ProgramNode, Location::zero()).with_children(vec![child]);
 
         assert_eq!(node.children.len(), 1);
         assert_eq!(node.children[0].node_type, NodeType::ClassNode);
@@ -262,18 +258,9 @@ mod tests {
 
     #[test]
     fn test_node_type_from_str() {
-        assert_eq!(
-            NodeType::from_str("program_node"),
-            NodeType::ProgramNode
-        );
-        assert_eq!(
-            NodeType::from_str("class_node"),
-            NodeType::ClassNode
-        );
-        assert_eq!(
-            NodeType::from_str("def_node"),
-            NodeType::DefNode
-        );
+        assert_eq!(NodeType::from_str("program_node"), NodeType::ProgramNode);
+        assert_eq!(NodeType::from_str("class_node"), NodeType::ClassNode);
+        assert_eq!(NodeType::from_str("def_node"), NodeType::DefNode);
 
         // Unknown type should return Unknown variant
         match NodeType::from_str("unknown_node") {
@@ -300,25 +287,16 @@ mod tests {
 
     #[test]
     fn test_node_is_multiline() {
-        let single_line = Node::new(
-            NodeType::CallNode,
-            Location::new(1, 0, 1, 10, 0, 10),
-        );
+        let single_line = Node::new(NodeType::CallNode, Location::new(1, 0, 1, 10, 0, 10));
         assert!(!single_line.is_multiline());
 
-        let multi_line = Node::new(
-            NodeType::ClassNode,
-            Location::new(1, 0, 5, 3, 0, 50),
-        );
+        let multi_line = Node::new(NodeType::ClassNode, Location::new(1, 0, 5, 3, 0, 50));
         assert!(multi_line.is_multiline());
     }
 
     #[test]
     fn test_node_line_count() {
-        let node = Node::new(
-            NodeType::DefNode,
-            Location::new(10, 0, 15, 3, 100, 200),
-        );
+        let node = Node::new(NodeType::DefNode, Location::new(10, 0, 15, 3, 100, 200));
         assert_eq!(node.line_count(), 6);
     }
 

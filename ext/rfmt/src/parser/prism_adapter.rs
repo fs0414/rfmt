@@ -1,6 +1,4 @@
-use crate::ast::{
-    Comment, CommentPosition, CommentType, FormattingInfo, Location, Node, NodeType,
-};
+use crate::ast::{Comment, CommentPosition, CommentType, FormattingInfo, Location, Node, NodeType};
 use crate::error::{Result, RfmtError};
 use crate::parser::RubyParser;
 use serde::{Deserialize, Serialize};
@@ -23,9 +21,8 @@ impl PrismAdapter {
         }
 
         // Fall back to old format (single node without comments)
-        let node: PrismNode = serde_json::from_str(json).map_err(|e| {
-            RfmtError::PrismError(format!("Failed to parse Prism JSON: {}", e))
-        })?;
+        let node: PrismNode = serde_json::from_str(json)
+            .map_err(|e| RfmtError::PrismError(format!("Failed to parse Prism JSON: {}", e)))?;
         Ok((node, Vec::new()))
     }
 
@@ -117,11 +114,8 @@ impl RubyParser for PrismAdapter {
 
         // Attach top-level comments to the root node
         if !top_level_comments.is_empty() {
-            node.comments.extend(
-                top_level_comments
-                    .iter()
-                    .map(|c| self.convert_comment(c))
-            );
+            node.comments
+                .extend(top_level_comments.iter().map(|c| self.convert_comment(c)));
         }
 
         Ok(node)

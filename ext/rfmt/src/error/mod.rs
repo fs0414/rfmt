@@ -53,10 +53,7 @@ pub enum RfmtError {
     FormatError(String),
 
     #[error("Internal error: {message}\nPlease report this as a bug")]
-    InternalError {
-        message: String,
-        backtrace: String,
-    },
+    InternalError { message: String, backtrace: String },
 
     #[error("Unsupported feature: {feature}\n{explanation}")]
     UnsupportedFeature {
@@ -96,7 +93,13 @@ impl RfmtError {
     /// ユーザーフレンドリーなエラーメッセージを生成
     pub fn user_message(&self) -> String {
         match self {
-            RfmtError::ParseError { file, line, column, message, snippet } => {
+            RfmtError::ParseError {
+                file,
+                line,
+                column,
+                message,
+                snippet,
+            } => {
                 format!(
                     "Parse error in {}:{}:{}\n{}\n\nCode:\n{}",
                     file.display(),
@@ -106,7 +109,11 @@ impl RfmtError {
                     snippet
                 )
             }
-            RfmtError::ConfigError { message, file, suggestion } => {
+            RfmtError::ConfigError {
+                message,
+                file,
+                suggestion,
+            } => {
                 format!(
                     "Configuration error: {}\nFile: {}\n\nSuggestion: {}",
                     message,
@@ -114,7 +121,11 @@ impl RfmtError {
                     suggestion
                 )
             }
-            RfmtError::FormattingError { message, node_type, location } => {
+            RfmtError::FormattingError {
+                message,
+                node_type,
+                location,
+            } => {
                 format!(
                     "Formatting error: {}\nNode type: {}\nLocation: {}",
                     message, node_type, location
@@ -126,11 +137,11 @@ impl RfmtError {
                     message, backtrace
                 )
             }
-            RfmtError::UnsupportedFeature { feature, explanation } => {
-                format!(
-                    "Unsupported feature: {}\n\n{}",
-                    feature, explanation
-                )
+            RfmtError::UnsupportedFeature {
+                feature,
+                explanation,
+            } => {
+                format!("Unsupported feature: {}\n\n{}", feature, explanation)
             }
             _ => self.to_string(),
         }

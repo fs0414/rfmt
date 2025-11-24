@@ -127,6 +127,9 @@ mod tests {
         context.add_metadata("node_type", "class");
 
         assert_eq!(context.metadata.get("phase"), Some(&"parsing".to_string()));
-        assert_eq!(context.metadata.get("node_type"), Some(&"class".to_string()));
+        assert_eq!(
+            context.metadata.get("node_type"),
+            Some(&"class".to_string())
+        );
     }
 }

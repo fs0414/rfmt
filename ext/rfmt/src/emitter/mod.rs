@@ -123,9 +123,17 @@ impl Emitter {
         for (i, child) in node.children.iter().enumerate() {
             self.emit_node(child, indent_level)?;
 
-            // Add newline between top-level statements
+            // Add newlines between top-level statements, normalizing to max 1 blank line
             if i < node.children.len() - 1 {
-                self.buffer.push('\n');
+                let current_end_line = child.location.end_line;
+                let next_start_line = node.children[i + 1].location.start_line;
+                let line_diff = next_start_line.saturating_sub(current_end_line);
+
+                // Add 1 newline if consecutive, 2 newlines (1 blank line) if there was a gap
+                let newlines = if line_diff > 1 { 2 } else { 1 };
+                for _ in 0..newlines {
+                    self.buffer.push('\n');
+                }
             }
         }
         Ok(())
@@ -136,9 +144,17 @@ impl Emitter {
         for (i, child) in node.children.iter().enumerate() {
             self.emit_node(child, indent_level)?;
 
-            // Add newline between statements
+            // Add newlines between statements, normalizing to max 1 blank line
             if i < node.children.len() - 1 {
-                self.buffer.push('\n');
+                let current_end_line = child.location.end_line;
+                let next_start_line = node.children[i + 1].location.start_line;
+                let line_diff = next_start_line.saturating_sub(current_end_line);
+
+                // Add 1 newline if consecutive, 2 newlines (1 blank line) if there was a gap
+                let newlines = if line_diff > 1 { 2 } else { 1 };
+                for _ in 0..newlines {
+                    self.buffer.push('\n');
+                }
             }
         }
         Ok(())

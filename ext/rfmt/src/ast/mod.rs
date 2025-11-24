@@ -27,7 +27,6 @@ pub struct Location {
 }
 
 /// Node types supported by rfmt
-/// Phase 1 implements basic types, more will be added in Phase 2
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeType {
@@ -71,7 +70,6 @@ pub enum NodeType {
     KeywordRestParameterNode,
     BlockParameterNode,
 
-    // Catch-all for unsupported types in Phase 1
     Unknown(String),
 }
 
@@ -144,7 +142,6 @@ pub enum CommentPosition {
 }
 
 /// Formatting information attached to a node
-/// Will be used in Phase 2 for formatting rules
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FormattingInfo {
     pub indent_level: usize,

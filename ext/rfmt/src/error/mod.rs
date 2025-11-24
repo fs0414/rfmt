@@ -18,7 +18,7 @@ pub enum RfmtError {
         line: usize,
         column: usize,
         message: String,
-        snippet: String, // コードスニペット
+        snippet: String,
     },
 
     #[error("Configuration error: {message}\nFile: {file}\nSuggestion: {suggestion}")]

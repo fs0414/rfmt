@@ -1,23 +1,15 @@
 mod ast;
-mod cache;
 mod config;
-mod debug;
 mod emitter;
 mod error;
-mod formatter;
 mod logging;
 mod parser;
-mod plugin;
 mod policy;
-
-#[allow(unused_imports)]
-use debug::*;
 
 use policy::SecurityPolicy;
 
 use config::Config;
 use emitter::Emitter;
-use formatter::Formatter;
 use magnus::{define_module, function, prelude::*, Error, Ruby};
 use parser::{PrismAdapter, RubyParser};
 
@@ -51,7 +43,7 @@ fn parse_to_json(ruby: &Ruby, source: String) -> Result<String, Error> {
 }
 
 fn rust_version() -> String {
-    "0.1.0 (Rust)".to_string()
+    "0.2.0 (Rust)".to_string()
 }
 
 #[magnus::init]

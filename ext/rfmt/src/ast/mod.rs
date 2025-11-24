@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub mod visitor;
-
 /// Internal AST representation
 /// This structure is designed to work seamlessly with Prism parser output
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,15 +106,6 @@ impl NodeType {
         }
     }
 
-    /// Check if this node type is a definition (class, module, def)
-    pub fn is_definition(&self) -> bool {
-        matches!(self, Self::ClassNode | Self::ModuleNode | Self::DefNode)
-    }
-
-    /// Check if this node type requires a newline after
-    pub fn requires_newline_after(&self) -> bool {
-        self.is_definition()
-    }
 }
 
 /// Comment attached to a node
@@ -153,58 +142,6 @@ pub struct FormattingInfo {
 }
 
 impl Node {
-    /// Create a new node with the given type and location
-    pub fn new(node_type: NodeType, location: Location) -> Self {
-        Self {
-            node_type,
-            location,
-            children: Vec::new(),
-            metadata: HashMap::new(),
-            comments: Vec::new(),
-            formatting: FormattingInfo::default(),
-        }
-    }
-
-    /// Create a node with children
-    pub fn with_children(mut self, children: Vec<Node>) -> Self {
-        self.children = children;
-        self
-    }
-
-    /// Add metadata to the node
-    pub fn with_metadata(mut self, key: String, value: String) -> Self {
-        self.metadata.insert(key, value);
-        self
-    }
-
-    /// Add comments to the node
-    pub fn with_comments(mut self, comments: Vec<Comment>) -> Self {
-        self.comments = comments;
-        self
-    }
-
-    /// Check if the node spans multiple lines
-    pub fn is_multiline(&self) -> bool {
-        self.location.start_line != self.location.end_line
-    }
-
-    /// Get the number of lines this node spans
-    pub fn line_count(&self) -> usize {
-        self.location.end_line - self.location.start_line + 1
-    }
-
-    /// Check if this node is an unknown type
-    pub fn is_unknown(&self) -> bool {
-        matches!(self.node_type, NodeType::Unknown(_))
-    }
-
-    /// Get the unknown type name if this is an unknown node
-    pub fn unknown_type(&self) -> Option<&str> {
-        match &self.node_type {
-            NodeType::Unknown(name) => Some(name),
-            _ => None,
-        }
-    }
 }
 
 impl Location {
@@ -225,11 +162,6 @@ impl Location {
             start_offset,
             end_offset,
         }
-    }
-
-    /// Create a zero location (useful for testing)
-    pub fn zero() -> Self {
-        Self::new(0, 0, 0, 0, 0, 0)
     }
 }
 

@@ -75,7 +75,7 @@ impl Emitter {
 
         // Now emit the collected comments
         for (idx, text) in indices_to_emit {
-            write!(self.buffer, "{}{}\n", indent_str, text)?;
+            writeln!(self.buffer, "{}{}", indent_str, text)?;
             self.emitted_comment_indices.push(idx);
         }
 
@@ -337,10 +337,6 @@ impl Emitter {
                 | NodeType::KeywordRestParameterNode
                 | NodeType::BlockParameterNode
         )
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.config
     }
 }
 

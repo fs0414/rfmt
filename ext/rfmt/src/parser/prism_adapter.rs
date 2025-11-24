@@ -120,10 +120,6 @@ impl RubyParser for PrismAdapter {
 
         Ok(node)
     }
-
-    fn name(&self) -> &'static str {
-        "prism"
-    }
 }
 
 impl Default for PrismAdapter {

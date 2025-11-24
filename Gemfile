@@ -21,6 +21,9 @@ gem "rake-compiler", "~> 1.2"
 gem "rspec", "~> 3.12"
 gem "rubocop", "~> 1.59"
 
+# Ruby 3.1 compatibility - erb 6.0+ requires Ruby 3.2+
+gem "erb", "< 6.0"
+
 # Testing
 group :test do
   gem "simplecov", "~> 0.22"

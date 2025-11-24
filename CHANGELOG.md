@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.2.4] - 2025-11-25
+
+### Fixed
+- Fixed if-else expression formatting
+
 ## [0.2.3] - 2025-01-25
 
 ### Added

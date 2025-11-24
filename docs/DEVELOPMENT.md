@@ -1,0 +1,587 @@
+# Development Guide
+
+This guide covers testing, building, and releasing rfmt.
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Building](#building)
+- [Testing](#testing)
+- [Development Workflow](#development-workflow)
+- [Release Process](#release-process)
+- [Troubleshooting](#troubleshooting)
+
+## Prerequisites
+
+### Required Tools
+
+- **Ruby**: 3.0 or later
+- **Rust**: 1.70 or later (installed via rustup)
+- **Bundler**: `gem install bundler`
+- **Rake**: Included in Ruby standard library
+
+### System Dependencies
+
+**Install Rust** (via rustup - works on all platforms):
+```bash
+# Install rustup and Rust toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Follow the on-screen instructions, then:
+source $HOME/.cargo/env
+
+# Verify installation
+rustc --version
+cargo --version
+```
+
+**Additional dependencies**:
+
+- **macOS**: Xcode Command Line Tools
+  ```bash
+  xcode-select --install
+  ```
+
+- **Linux (Debian/Ubuntu)**:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install build-essential
+  ```
+
+- **Windows**:
+  - Download and run rustup-init.exe from https://rustup.rs
+  - Install Visual Studio C++ Build Tools
+
+### Setup
+
+```bash
+# Clone repository
+git clone https://github.com/yourusername/rfmt.git
+cd rfmt
+
+# Install Ruby dependencies
+bundle install
+
+# Build native extension
+bundle exec rake compile
+```
+
+## Building
+
+### Clean Build
+
+```bash
+# Clean all build artifacts
+bundle exec rake clean
+bundle exec rake clobber
+
+# Rebuild from scratch
+bundle exec rake compile
+```
+
+### Development Build
+
+```bash
+# Quick rebuild (only changed files)
+bundle exec rake compile
+```
+
+### Build Options
+
+```bash
+# Build in debug mode (faster compilation, slower runtime)
+cd ext/rfmt
+cargo build
+
+# Build in release mode (default for rake compile)
+cargo build --release
+
+# Check for compilation errors without building
+cargo check
+```
+
+## Testing
+
+### Ruby Tests
+
+#### Run All Tests
+
+```bash
+# All RSpec tests
+bundle exec rake spec
+
+# or
+bundle exec rspec
+```
+
+#### Run Specific Tests
+
+```bash
+# Single test file
+bundle exec rspec spec/formatter_spec.rb
+
+# Specific test by line number
+bundle exec rspec spec/formatter_spec.rb:45
+
+# Tests matching a pattern
+bundle exec rspec spec/formatter_spec.rb -e "indentation"
+```
+
+#### Test Output Options
+
+```bash
+# Documentation format (detailed)
+bundle exec rspec --format documentation
+
+# Progress format (default)
+bundle exec rspec --format progress
+
+# Only failures
+bundle exec rspec --only-failures
+```
+
+### Rust Tests
+
+#### Run All Rust Tests
+
+```bash
+cd ext/rfmt
+
+# All tests
+cargo test
+
+# Library tests only (no integration tests)
+cargo test --lib
+
+# With output
+cargo test -- --nocapture
+```
+
+#### Run Specific Rust Tests
+
+```bash
+# Tests in a specific module
+cargo test ast::tests
+
+# Single test
+cargo test test_node_creation
+
+# Tests matching pattern
+cargo test parse
+```
+
+### Coverage
+
+```bash
+# Install coverage tool (once)
+cargo install cargo-tarpaulin
+
+# Generate coverage report
+cd ext/rfmt
+cargo tarpaulin --out Html --output-dir ../../coverage
+```
+
+## Development Workflow
+
+### 1. Make Changes
+
+Edit files in:
+- `lib/` - Ruby code
+- `ext/rfmt/src/` - Rust code
+- `spec/` - Tests
+
+### 2. Build & Test
+
+```bash
+# After changing Rust code
+bundle exec rake compile
+
+# Run tests
+bundle exec rake spec
+
+# Run Rust tests
+cd ext/rfmt && cargo test
+```
+
+### 3. Verify
+
+```bash
+# Manual testing with IRB
+bundle exec irb -I lib -r rfmt
+
+# In IRB:
+input = "class Foo\nend"
+puts Rfmt.format(input)
+```
+
+### 4. Format & Lint
+
+```bash
+# Format Rust code
+cd ext/rfmt
+cargo fmt
+
+# Check lints
+cargo clippy
+
+# Format Ruby code
+bundle exec rubocop -a
+```
+
+### 5. Run Full Test Suite
+
+```bash
+# All tests
+bundle exec rake
+
+# or
+bundle exec rake spec
+cd ext/rfmt && cargo test
+```
+
+## Release Process
+
+### Pre-Release Checklist
+
+- [ ] All tests passing
+- [ ] Version updated in `lib/rfmt/version.rb`
+- [ ] Version updated in `ext/rfmt/Cargo.toml`
+- [ ] CHANGELOG.md updated
+- [ ] Documentation updated
+- [ ] No uncommitted changes
+
+### Version Update
+
+1. **Update Ruby version** (`lib/rfmt/version.rb`):
+
+```ruby
+module Rfmt
+  VERSION = "0.2.0"  # Update this
+end
+```
+
+2. **Update Rust version** (`ext/rfmt/Cargo.toml`):
+
+```toml
+[package]
+name = "rfmt"
+version = "0.2.0"  # Update this
+```
+
+3. **Update CHANGELOG.md**:
+
+```markdown
+## [0.2.0] - 2025-01-15
+
+### Added
+- New feature X
+- New feature Y
+
+### Fixed
+- Bug fix Z
+```
+
+### Build Gem
+
+```bash
+# Build gem package
+gem build rfmt.gemspec
+
+# This creates: rfmt-0.2.0.gem
+```
+
+### Test Gem Locally
+
+```bash
+# Install locally
+gem install rfmt-0.2.0.gem
+
+# Test it
+irb
+> require 'rfmt'
+> Rfmt.format("class Foo\nend")
+```
+
+### Publish to RubyGems
+
+#### First Time Setup
+
+```bash
+# Create RubyGems account at https://rubygems.org
+
+# Get API key
+curl -u your_username https://rubygems.org/api/v1/api_key.yaml > ~/.gem/credentials
+chmod 0600 ~/.gem/credentials
+```
+
+#### Push to RubyGems
+
+```bash
+# Push the gem
+gem push rfmt-0.2.0.gem
+
+# Verify at https://rubygems.org/gems/rfmt
+```
+
+### Post-Release
+
+1. **Create Git Tag**:
+
+```bash
+git tag -a v0.2.0 -m "Release version 0.2.0"
+git push origin v0.2.0
+```
+
+2. **Create GitHub Release**:
+
+- Go to https://github.com/yourusername/rfmt/releases/new
+- Select tag `v0.2.0`
+- Set release title: `v0.2.0`
+- Copy CHANGELOG entry to description
+- Attach `rfmt-0.2.0.gem` file
+- Publish release
+
+3. **Announce**:
+
+- Update README if needed
+- Post on Ruby forums/communities if significant release
+
+## Troubleshooting
+
+### Build Issues
+
+#### Problem: "cargo: command not found"
+
+```bash
+# Install Rust via rustup (official method)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Add Cargo to PATH for current session
+source $HOME/.cargo/env
+
+# To make it permanent, rustup installer adds this line to your shell profile:
+# export PATH="$HOME/.cargo/bin:$PATH"
+
+# Verify installation
+cargo --version
+```
+
+#### Problem: "magnus version mismatch"
+
+```bash
+# Clean and rebuild
+bundle exec rake clobber
+bundle exec rake compile
+```
+
+#### Problem: Build fails after git pull
+
+```bash
+# Update dependencies
+bundle install
+cd ext/rfmt && cargo update
+
+# Clean rebuild
+bundle exec rake clobber compile
+```
+
+### Test Issues
+
+#### Problem: Tests fail after changes
+
+```bash
+# Rebuild extension
+bundle exec rake compile
+
+# Clear Ruby cache
+rm -rf tmp/
+
+# Run tests again
+bundle exec rspec
+```
+
+#### Problem: "Cannot load such file -- rfmt/rfmt"
+
+```bash
+# Extension not built or not in correct location
+bundle exec rake compile
+
+# Check if extension exists
+ls -la lib/rfmt/rfmt.bundle  # macOS
+ls -la lib/rfmt/rfmt.so      # Linux
+```
+
+### Runtime Issues
+
+#### Problem: "Prism integration error"
+
+```bash
+# Check Prism gem version
+bundle list | grep prism
+
+# Should be ~> 1.6.0
+# Update if needed
+bundle update prism
+```
+
+#### Problem: Segmentation fault
+
+This usually indicates a bug in Rust code. To debug:
+
+```bash
+# Build debug version
+cd ext/rfmt
+cargo build
+
+# Run with debugging
+RUST_BACKTRACE=1 bundle exec ruby your_test.rb
+```
+
+### Performance Issues
+
+#### Problem: Formatting is slow
+
+```bash
+# Make sure using release build
+bundle exec rake compile  # Uses --release by default
+
+# Verify
+file lib/rfmt/rfmt.bundle
+# Should say "not stripped" for debug, "stripped" for release
+```
+
+## Development Tips
+
+### Fast Iteration
+
+```bash
+# Terminal 1: Watch for file changes
+while true; do
+  inotifywait -e modify ext/rfmt/src/*.rs
+  bundle exec rake compile
+done
+
+# Terminal 2: Run tests
+bundle exec rspec
+```
+
+### Debugging
+
+#### Ruby Side
+
+```ruby
+# Add to code
+require 'debug'
+binding.break  # Ruby 3.1+
+
+# or
+require 'pry'
+binding.pry
+```
+
+#### Rust Side
+
+```rust
+// Add to code
+dbg!(&some_variable);
+
+// or
+eprintln!("Debug: {:?}", some_value);
+```
+
+Run with:
+
+```bash
+RUST_BACKTRACE=1 bundle exec rspec
+```
+
+### Benchmarking
+
+```ruby
+require 'benchmark'
+require 'rfmt'
+
+code = File.read('large_file.rb')
+
+Benchmark.bm do |x|
+  x.report("format:") { Rfmt.format(code) }
+end
+```
+
+### Memory Profiling
+
+```bash
+# Install tool
+gem install memory_profiler
+
+# Create profile script
+cat > profile_memory.rb <<'EOF'
+require 'memory_profiler'
+require 'rfmt'
+
+code = File.read('large_file.rb')
+
+report = MemoryProfiler.report do
+  Rfmt.format(code)
+end
+
+report.pretty_print
+EOF
+
+# Run it
+ruby profile_memory.rb
+```
+
+## Continuous Integration
+
+Example GitHub Actions workflow (`.github/workflows/ci.yml`):
+
+```yaml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby: ['3.0', '3.1', '3.2', '3.3']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler-cache: true
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Build extension
+      run: bundle exec rake compile
+
+    - name: Run Ruby tests
+      run: bundle exec rspec
+
+    - name: Run Rust tests
+      run: cd ext/rfmt && cargo test
+```
+
+## Additional Resources
+
+- [Rust Documentation](https://doc.rust-lang.org/book/)
+- [Magnus Documentation](https://docs.rs/magnus/)
+- [RSpec Documentation](https://rspec.info/documentation/)
+- [RubyGems Guides](https://guides.rubygems.org/)
+
+## Getting Help
+
+- GitHub Issues: https://github.com/yourusername/rfmt/issues
+- Discussions: https://github.com/yourusername/rfmt/discussions

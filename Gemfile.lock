@@ -8,8 +8,12 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
+    benchmark-malloc (0.2.0)
+    benchmark-perf (0.6.0)
+    benchmark-trend (0.4.0)
     date (3.4.1)
     diff-lcs (1.6.2)
+    docile (1.4.1)
     erb (5.0.2)
     io-console (0.8.1)
     irb (1.15.2)
@@ -26,7 +30,7 @@ GEM
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
-    prism (1.4.0)
+    prism (1.6.0)
     psych (5.2.6)
       date
       stringio
@@ -48,6 +52,11 @@ GEM
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)
       rspec-mocks (~> 3.13.0)
+    rspec-benchmark (0.6.0)
+      benchmark-malloc (~> 0.2)
+      benchmark-perf (~> 0.6)
+      benchmark-trend (~> 0.4)
+      rspec (>= 3.0)
     rspec-core (3.13.5)
       rspec-support (~> 3.13.0)
     rspec-expectations (3.13.5)
@@ -72,6 +81,12 @@ GEM
       parser (>= 3.3.7.2)
       prism (~> 1.4)
     ruby-progressbar (1.13.0)
+    simplecov (0.22.0)
+      docile (~> 1.1)
+      simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
+    simplecov-html (0.13.2)
+    simplecov_json_formatter (0.1.4)
     stringio (3.1.7)
     unicode-display_width (3.1.5)
       unicode-emoji (~> 4.0, >= 4.0.4)
@@ -83,11 +98,14 @@ PLATFORMS
 
 DEPENDENCIES
   irb
+  prism (~> 1.6.0)
   rake (~> 13.0)
-  rake-compiler
+  rake-compiler (~> 1.2)
   rfmt!
-  rspec (~> 3.0)
-  rubocop (~> 1.21)
+  rspec (~> 3.12)
+  rspec-benchmark (~> 0.6)
+  rubocop (~> 1.59)
+  simplecov (~> 0.22)
 
 BUNDLED WITH
    2.7.1

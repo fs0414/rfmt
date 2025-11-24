@@ -11,4 +11,43 @@ name = "rfmt"
 crate-type = ["cdylib"]
 
 [dependencies]
+# Ruby FFI
 magnus = { version = "0.6.2" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+rmp-serde = "1.1"  # MessagePack
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Parallel processing
+rayon = "1.8"
+
+# Caching
+lru = "0.12"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Configuration
+config = "0.14"
+toml = "0.8"
+
+# CLI (optional)
+clap = { version = "4.4", features = ["derive"], optional = true }
+
+[dev-dependencies]
+# Testing
+proptest = "1.4"
+insta = "1.34"
+criterion = "0.5"
+tempfile = "3.8"
+
+[features]
+default = ["cli"]
+cli = ["clap"]

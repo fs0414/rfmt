@@ -1,0 +1,259 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "date"
+require "fileutils"
+
+# Release script for rfmt
+# Usage: bin/release [VERSION] [--dry-run]
+#
+# Examples:
+#   bin/release 0.2.0           # Release version 0.2.0
+#   bin/release 0.2.0 --dry-run # Test without making changes
+#   bin/release                 # Interactive mode
+
+class ReleaseScript
+  VERSION_FILE = "lib/rfmt/version.rb"
+  CHANGELOG_FILE = "CHANGELOG.md"
+  GEMSPEC_FILE = "rfmt.gemspec"
+
+  def initialize(args)
+    @new_version = args[0]
+    @dry_run = args.include?("--dry-run")
+    @current_version = extract_current_version
+  end
+
+  def run
+    puts "🚀 rfmt Release Script"
+    puts "=" * 50
+    puts
+
+    if @dry_run
+      puts "⚠️  DRY RUN MODE - No changes will be made"
+      puts
+    end
+
+    # Interactive mode if no version provided
+    @new_version ||= prompt_for_version
+
+    # Validate version format
+    unless valid_version?(@new_version)
+      abort "❌ Invalid version format: #{@new_version}\nExpected format: X.Y.Z"
+    end
+
+    # Show release plan
+    show_release_plan
+
+    # Confirm
+    unless @dry_run || confirm("Proceed with release?")
+      puts "Release cancelled."
+      exit 0
+    end
+
+    # Execute release steps
+    update_version_file
+    update_changelog
+    run_tests
+    commit_changes
+    create_tag
+    show_next_steps
+
+    puts
+    puts "✅ Release preparation complete!"
+    puts
+  end
+
+  private
+
+  def extract_current_version
+    content = File.read(VERSION_FILE)
+    content[/VERSION = "(.+)"/, 1]
+  end
+
+  def prompt_for_version
+    puts "Current version: #{@current_version}"
+    puts
+    puts "Suggested versions:"
+    suggest_versions.each { |type, version| puts "  #{type}: #{version}" }
+    puts
+    print "Enter new version (or 'patch', 'minor', 'major'): "
+    input = $stdin.gets.chomp
+
+    case input
+    when "patch", "minor", "major"
+      bump_version(input.to_sym)
+    else
+      input
+    end
+  end
+
+  def suggest_versions
+    major, minor, patch = @current_version.split(".").map(&:to_i)
+    {
+      "Patch" => "#{major}.#{minor}.#{patch + 1}",
+      "Minor" => "#{major}.#{minor + 1}.0",
+      "Major" => "#{major + 1}.0.0"
+    }
+  end
+
+  def bump_version(type)
+    major, minor, patch = @current_version.split(".").map(&:to_i)
+
+    case type
+    when :patch
+      "#{major}.#{minor}.#{patch + 1}"
+    when :minor
+      "#{major}.#{minor + 1}.0"
+    when :major
+      "#{major + 1}.0.0"
+    end
+  end
+
+  def valid_version?(version)
+    version =~ /^\d+\.\d+\.\d+$/
+  end
+
+  def show_release_plan
+    puts "Release Plan:"
+    puts "  Current version: #{@current_version}"
+    puts "  New version:     #{@new_version}"
+    puts "  Mode:            #{@dry_run ? 'DRY RUN' : 'LIVE'}"
+    puts
+    puts "Steps:"
+    puts "  1. Update #{VERSION_FILE}"
+    puts "  2. Update #{CHANGELOG_FILE}"
+    puts "  3. Run tests"
+    puts "  4. Commit changes"
+    puts "  5. Create git tag v#{@new_version}"
+    puts
+  end
+
+  def confirm(message)
+    print "#{message} (y/N): "
+    response = $stdin.gets.chomp.downcase
+    response == "y" || response == "yes"
+  end
+
+  def update_version_file
+    puts "📝 Updating #{VERSION_FILE}..."
+
+    content = File.read(VERSION_FILE)
+    new_content = content.gsub(
+      /VERSION = "#{Regexp.escape(@current_version)}"/,
+      "VERSION = \"#{@new_version}\""
+    )
+
+    if @dry_run
+      puts "   Would update: VERSION = \"#{@current_version}\" -> VERSION = \"#{@new_version}\""
+    else
+      File.write(VERSION_FILE, new_content)
+      puts "   ✓ Updated #{VERSION_FILE}"
+    end
+  end
+
+  def update_changelog
+    puts "📝 Updating #{CHANGELOG_FILE}..."
+
+    content = File.read(CHANGELOG_FILE)
+    today = Date.today.strftime("%Y-%m-%d")
+
+    # Replace [Unreleased] with version and date
+    new_content = content.sub(
+      "## [Unreleased]",
+      "## [Unreleased]\n\n## [#{@new_version}] - #{today}"
+    )
+
+    if @dry_run
+      puts "   Would add: ## [#{@new_version}] - #{today}"
+    else
+      File.write(CHANGELOG_FILE, new_content)
+      puts "   ✓ Updated #{CHANGELOG_FILE}"
+      puts
+      puts "   ⚠️  Please review and update the changelog entry:"
+      puts "      - Add release notes under [#{@new_version}]"
+      puts "      - Move items from [Unreleased] if needed"
+      puts
+      unless confirm("Have you updated the changelog?")
+        abort "Please update the changelog and run again."
+      end
+    end
+  end
+
+  def run_tests
+    puts "🧪 Running tests..."
+
+    if @dry_run
+      puts "   Would run: bundle exec rspec"
+      return
+    end
+
+    system("bundle exec rspec")
+    unless $?.success?
+      abort "❌ Tests failed. Fix tests before releasing."
+    end
+
+    puts "   ✓ All tests passed"
+  end
+
+  def commit_changes
+    puts "📦 Committing changes..."
+
+    commands = [
+      "git add #{VERSION_FILE} #{CHANGELOG_FILE}",
+      "git commit -m \"chore: release v#{@new_version}\"",
+    ]
+
+    if @dry_run
+      commands.each { |cmd| puts "   Would run: #{cmd}" }
+    else
+      commands.each do |cmd|
+        system(cmd)
+        unless $?.success?
+          abort "❌ Failed to run: #{cmd}"
+        end
+      end
+      puts "   ✓ Changes committed"
+    end
+  end
+
+  def create_tag
+    puts "🏷️  Creating git tag..."
+
+    command = "git tag -a v#{@new_version} -m \"Release v#{@new_version}\""
+
+    if @dry_run
+      puts "   Would run: #{command}"
+    else
+      system(command)
+      unless $?.success?
+        abort "❌ Failed to create tag"
+      end
+      puts "   ✓ Tag v#{@new_version} created"
+    end
+  end
+
+  def show_next_steps
+    puts
+    puts "📋 Next Steps:"
+    puts "  1. Review the changes:"
+    puts "     git show"
+    puts
+    puts "  2. Push the changes and tag:"
+    puts "     git push origin main"
+    puts "     git push origin v#{@new_version}"
+    puts
+    puts "  3. GitHub Actions will automatically:"
+    puts "     - Build native gems for all platforms"
+    puts "     - Create a draft GitHub Release"
+    puts "     - Publish to RubyGems (if secrets configured)"
+    puts
+    puts "  4. Review and publish the draft release on GitHub:"
+    puts "     https://github.com/fs0414/rfmt/releases"
+    puts
+  end
+end
+
+# Run the script
+if __FILE__ == $0
+  ReleaseScript.new(ARGV).run
+end

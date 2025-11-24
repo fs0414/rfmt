@@ -9,8 +9,49 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+
+    - name: Extract version from tag
+      id: extract_version
+      run: |
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+        echo "Tag version: $TAG_VERSION"
+
+    - name: Verify version.rb matches tag
+      run: |
+        TAG_VERSION="${{ steps.extract_version.outputs.tag_version }}"
+        FILE_VERSION=$(ruby -r ./lib/rfmt/version.rb -e "puts Rfmt::VERSION")
+        echo "Tag version: $TAG_VERSION"
+        echo "File version: $FILE_VERSION"
+        if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+          echo "Error: Version mismatch!"
+          echo "Tag: v$TAG_VERSION"
+          echo "lib/rfmt/version.rb: $FILE_VERSION"
+          exit 1
+        fi
+
+    - name: Check CHANGELOG.md updated
+      run: |
+        TAG_VERSION="${{ steps.extract_version.outputs.tag_version }}"
+        if ! grep -q "## \[$TAG_VERSION\]" CHANGELOG.md; then
+          echo "Error: CHANGELOG.md does not contain version $TAG_VERSION"
+          exit 1
+        fi
+        echo "CHANGELOG.md is up to date"
+
   build:
     name: Build gem for ${{ matrix.platform }}
+    needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -55,6 +96,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Extract version from tag
+      id: extract_version
+      run: |
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Extract changelog for this version
+      id: changelog
+      run: |
+        TAG_VERSION="${{ steps.extract_version.outputs.tag_version }}"
+        CHANGELOG=$(sed -n "/## \[$TAG_VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
@@ -65,6 +121,20 @@ jobs:
       with:
         files: artifacts/**/*.gem
         draft: true
+        body: |
+          ## What's Changed
+
+          ${{ steps.changelog.outputs.changelog }}
+
+          ## Installation
+
+          ```bash
+          gem install rfmt -v ${{ steps.extract_version.outputs.tag_version }}
+          ```
+
+          ## Full Changelog
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/v${{ steps.extract_version.outputs.tag_version }}/CHANGELOG.md) for all changes.
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

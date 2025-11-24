@@ -312,117 +312,44 @@ class User < ApplicationRecord
 end
 ```
 
+## Performance Benchmarks
+
+rfmt demonstrates exceptional performance compared to RuboCop, tested on a real Rails project (111 files, 3,231 lines):
+
+### Real-World Performance (Rails Project)
+
+| Scenario | rfmt | RuboCop | Speedup |
+|----------|------|---------|---------|
+| **Single File** | ~190ms | ~1.35s | **7.3x faster** |
+| **Directory (14 files)** | 168ms | 1.67s | **10.0x faster** |
+| **Full Project (111 files)** | 173ms | 10.09s | **58.5x faster** |
+| **Check Mode (CI/CD)** | 172ms | 1.55s | **9.0x faster** |
+
+### Key Highlights
+
+- ⚡ **Instant formatting**: Single files format in under 200ms
+- 🚀 **Scales exceptionally**: 58x faster on full project checks
+- 💨 **CI/CD optimized**: Reduces check time from 10s to 0.17s (99% reduction)
+- 📊 **Consistent performance**: Stable execution times with low variance
+
+### Throughput Comparison
+
+| Directory | rfmt | RuboCop | Difference |
+|-----------|------|---------|------------|
+| app/models (14 files) | 83.5 files/s | 8.4 files/s | **10x throughput** |
+| test/ (30 files) | 168.1 files/s | 18.1 files/s | **9.3x throughput** |
+
+*Benchmarks run on Apple Silicon (arm64), macOS Darwin 23.6.0, Ruby 3.4.5*
+
+See [detailed benchmark report](docspriv/benchmark_report.md) for complete analysis.
+
 ## Documentation
 
-Comprehensive documentation is available:
-
-- 📖 [User Guide](docs/user_guide.md) - Complete usage guide
-- 🌐 [User Guide (日本語)](docs/user_guide.ja.md) - Japanese version
-- 🔍 [Error Reference](docs/error_reference.md) - All error codes and solutions
-- 🔍 [Error Reference (日本語)](docs/error_reference.ja.md) - Japanese version
-- 🤝 [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- 📊 [Phase 4 Implementation](docs/phase4_implementation_summary.md) - Recent changes
-
-## Development
-
-After checking out the repo:
-
-```bash
-# Install dependencies
-bundle install
-
-# Compile Rust extension
-bundle exec rake compile
-
-# Run tests
-bundle exec rspec
-
-# Run Rust tests
-cd ext/rfmt && cargo test
-```
-
-### Running Tests
-
-```bash
-# All tests
-bundle exec rspec
-
-# Specific test file
-bundle exec rspec spec/error_handling_spec.rb
-
-# With documentation format
-bundle exec rspec --format documentation
-```
-
-### Test Results
-
-All 187 tests passing:
-- 172 existing tests
-- 15 new tests for error handling and logging
-
-## Performance
-
-rfmt is designed for speed:
-
-| File Size | Format Time |
-|-----------|-------------|
-| 100 lines | < 10ms |
-| 1,000 lines | < 50ms |
-| 10,000 lines | < 500ms |
-
-*Benchmarks run on M1 MacBook Pro*
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features:
-
-- [ ] Pattern matching support
-- [ ] Numbered parameters
-- [ ] Additional formatting rules
-- [ ] Plugin system
-- [ ] Language server protocol (LSP)
+Comprehensive documentation is available in the [docs](docs/) directory. See our [User Guide](docs/user_guide.md) or [Contributing Guide](CONTRIBUTING.md) for more details.
 
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-**Quick Start:**
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/my-feature`)
-3. Make your changes and add tests
-4. Run tests (`bundle exec rspec`)
-5. Commit your changes (`git commit -m 'feat: add some feature'`)
-6. Push to the branch (`git push origin feature/my-feature`)
-7. Open a Pull Request
-
-## Architecture
-
-rfmt is built with a hybrid Ruby-Rust architecture:
-
-```
-┌─────────────────┐
-│   Ruby Layer    │  ← User API, Prism parser
-├─────────────────┤
-│  FFI Interface  │  ← Magnus (Ruby-Rust bridge)
-├─────────────────┤
-│   Rust Layer    │  ← Formatting engine
-│                 │    - Parser (AST)
-│                 │    - Formatter (Rules)
-│                 │    - Emitter (Output)
-│                 │    - Error Handler
-│                 │    - Logger
-└─────────────────┘
-```
-
-## Technology Stack
-
-- **Ruby**: 3.0+ (Prism parser, FFI interface)
-- **Rust**: 1.70+ (Core formatting engine)
-- **Magnus**: Ruby-Rust FFI bridge
-- **Prism**: Modern Ruby parser
-- **RSpec**: Ruby testing
-- **Cargo**: Rust build system
 
 ## Comparison with Other Tools
 
@@ -431,36 +358,12 @@ rfmt is built with a hybrid Ruby-Rust architecture:
 | Feature | rfmt | RuboCop |
 |---------|------|---------|
 | **Primary Purpose** | Code formatting | Linting + formatting |
-| **Speed** | Very fast (Rust) | Moderate (Ruby) |
+| **Speed** | **58x faster** (real benchmark) | Moderate (Ruby) |
 | **Configuration** | Minimal | Extensive |
 | **Code Quality Checks** | No | Yes |
 | **Bug Detection** | No | Yes |
 
-**Recommendation**: Use rfmt for consistent formatting, RuboCop for code quality checks.
-
-### rfmt vs Prettier (Ruby plugin)
-
-| Feature | rfmt | Prettier |
-|---------|------|----------|
-| **Native Ruby Support** | Yes | Via plugin |
-| **Speed** | Very fast | Fast |
-| **Ruby-specific Features** | Full support | Limited |
-| **Comment Preservation** | Excellent | Good |
-
-## Project Status
-
-rfmt is under active development. Current phase:
-
-- ✅ Phase 1: Foundation (Complete)
-- ✅ Phase 2: Core Formatting (Complete)
-- ✅ Phase 3: Advanced Features (Complete)
-- ✅ Phase 4: Production Quality (Logging & Error Control Complete)
-  - ✅ Error Handling System
-  - ✅ Logging System
-  - ⬜ Documentation (In Progress)
-  - ⬜ Security
-  - ⬜ Release Process
-  - ⬜ Editor Integration
+**Recommendation**: Use rfmt for fast formatting, RuboCop for code quality checks. They complement each other perfectly.
 
 ## License
 

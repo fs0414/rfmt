@@ -74,9 +74,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.3'
-
-    - name: Install dependencies
-      run: bundle install
+        bundler-cache: true
 
     - name: Build native gem
       run: bundle exec rake native:${{ matrix.platform }}:gem
@@ -151,9 +149,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.3'
-
-    - name: Install dependencies
-      run: bundle install
+        bundler-cache: true
 
     - name: Build gem
       run: bundle exec rake build

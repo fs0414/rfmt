@@ -15,14 +15,16 @@ gem "diff-lcs", "~> 1.5"
 gem "parallel", "~> 1.24"
 
 # Development
-gem "irb"
 gem "rake", "~> 13.0"
 gem "rake-compiler", "~> 1.2"
 gem "rspec", "~> 3.12"
 gem "rubocop", "~> 1.59"
 
-# Ruby 3.1 compatibility - erb 6.0+ requires Ruby 3.2+
-gem "erb", "< 6.0"
+# Ruby 3.1 compatibility
+# These stdlib gems have versions that require Ruby 3.2+, so we constrain them
+# to versions compatible with Ruby 3.1
+gem "irb", "< 1.15"        # 1.15+ requires rdoc which requires newer erb
+gem "rdoc", "< 6.7"        # 6.7+ requires erb that needs Ruby 3.2+
 
 # Testing
 group :test do

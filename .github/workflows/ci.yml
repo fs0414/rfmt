@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Ruby ${{ matrix.ruby }} / Rust ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ruby: ['3.1', '3.2', '3.3']
+        rust: [stable]
+        include:
+          # Test with latest Ruby on Windows
+          - os: windows-latest
+            ruby: '3.3'
+            rust: stable
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+        bundler-cache: true
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          ext/rfmt/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Compile extension
+      run: bundle exec rake compile
+
+    - name: Run Ruby tests
+      run: bundle exec rspec
+
+    - name: Run Rust tests
+      run: cargo test --manifest-path ext/rfmt/Cargo.toml
+
+    - name: Check Rust formatting
+      run: cargo fmt --manifest-path ext/rfmt/Cargo.toml -- --check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Run RuboCop
+      run: bundle exec rubocop
+
+    - name: Run Clippy
+      run: cargo clippy --manifest-path ext/rfmt/Cargo.toml -- -D warnings
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Compile extension
+      run: bundle exec rake compile
+
+    - name: Run tests with coverage
+      run: bundle exec rspec
+      env:
+        COVERAGE: true
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage/coverage.xml
+        fail_ci_if_error: false

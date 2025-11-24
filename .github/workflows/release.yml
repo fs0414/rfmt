@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build gem for ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: x86_64-linux
+          - os: ubuntu-latest
+            platform: aarch64-linux
+          - os: macos-latest
+            platform: x86_64-darwin
+          - os: macos-latest
+            platform: arm64-darwin
+          - os: windows-latest
+            platform: x64-mingw-ucrt
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Build native gem
+      run: bundle exec rake native:${{ matrix.platform }}:gem
+      continue-on-error: true
+
+    - name: Upload gem artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gem-${{ matrix.platform }}
+        path: pkg/*.gem
+        if-no-files-found: warn
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/**/*.gem
+        draft: true
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to RubyGems
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+
+    - name: Install dependencies
+      run: bundle install
+
+    - name: Build gem
+      run: bundle exec rake build
+
+    - name: Publish to RubyGems
+      run: |
+        mkdir -p ~/.gem
+        echo ":rubygems_api_key: ${{ secrets.RUBYGEMS_API_KEY }}" > ~/.gem/credentials
+        chmod 0600 ~/.gem/credentials
+        gem push pkg/*.gem
+      if: env.RUBYGEMS_API_KEY != ''
+      env:
+        RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}

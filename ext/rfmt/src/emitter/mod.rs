@@ -113,6 +113,8 @@ impl Emitter {
             NodeType::ClassNode => self.emit_class(node, indent_level)?,
             NodeType::ModuleNode => self.emit_module(node, indent_level)?,
             NodeType::DefNode => self.emit_method(node, indent_level)?,
+            NodeType::IfNode => self.emit_if_unless(node, indent_level, false, "if")?,
+            NodeType::UnlessNode => self.emit_if_unless(node, indent_level, false, "unless")?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -300,6 +302,122 @@ impl Emitter {
 
         self.emit_indent(indent_level)?;
         write!(self.buffer, "end")?;
+
+        Ok(())
+    }
+
+    /// Emit if/unless/elsif/else node
+    /// is_elsif: true if this is an elsif clause (don't emit 'end')
+    /// keyword: "if" or "unless"
+    fn emit_if_unless(&mut self, node: &Node, indent_level: usize, is_elsif: bool, keyword: &str) -> Result<()> {
+        // Check if this is a postfix if (modifier form)
+        // In postfix if, the statements come before the if keyword in source
+        let is_postfix = if let (Some(predicate), Some(statements)) =
+            (node.children.first(), node.children.get(1)) {
+            statements.location.start_offset < predicate.location.start_offset
+        } else {
+            false
+        };
+
+        // Postfix if/unless: "statement if/unless condition"
+        if is_postfix && !is_elsif {
+            self.emit_comments_before(node.location.start_line, indent_level)?;
+            self.emit_indent(indent_level)?;
+
+            // Emit statement
+            if let Some(statements) = node.children.get(1) {
+                if matches!(statements.node_type, NodeType::StatementsNode) {
+                    // Extract the statement text (without extra indentation)
+                    if !self.source.is_empty() {
+                        let start = statements.location.start_offset;
+                        let end = statements.location.end_offset;
+                        if let Some(text) = self.source.get(start..end) {
+                            write!(self.buffer, "{}", text.trim())?;
+                        }
+                    }
+                }
+            }
+
+            write!(self.buffer, " {} ", keyword)?;
+
+            // Emit condition
+            if let Some(predicate) = node.children.first() {
+                if !self.source.is_empty() {
+                    let start = predicate.location.start_offset;
+                    let end = predicate.location.end_offset;
+                    if let Some(text) = self.source.get(start..end) {
+                        write!(self.buffer, "{}", text)?;
+                    }
+                }
+            }
+
+            return Ok(());
+        }
+
+        // Normal if/unless/elsif
+        if !is_elsif {
+            self.emit_comments_before(node.location.start_line, indent_level)?;
+        }
+
+        // Emit 'if'/'unless' or 'elsif' keyword
+        self.emit_indent(indent_level)?;
+        if is_elsif {
+            write!(self.buffer, "elsif ")?;
+        } else {
+            write!(self.buffer, "{} ", keyword)?;
+        }
+
+        // Emit predicate (condition) - first child
+        if let Some(predicate) = node.children.first() {
+            // Extract predicate from source
+            if !self.source.is_empty() {
+                let start = predicate.location.start_offset;
+                let end = predicate.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, "{}", text)?;
+                }
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit then clause (second child is StatementsNode)
+        if let Some(statements) = node.children.get(1) {
+            if matches!(statements.node_type, NodeType::StatementsNode) {
+                self.emit_statements(statements, indent_level + 1)?;
+                self.buffer.push('\n');
+            }
+        }
+
+        // Check for elsif/else (third child)
+        if let Some(consequent) = node.children.get(2) {
+            match &consequent.node_type {
+                NodeType::IfNode => {
+                    // This is an elsif clause (only valid for if, not unless)
+                    self.emit_if_unless(consequent, indent_level, true, "if")?;
+                }
+                NodeType::ElseNode => {
+                    // This is an else clause
+                    self.emit_indent(indent_level)?;
+                    write!(self.buffer, "else\n")?;
+
+                    // Emit else body (first child of ElseNode)
+                    if let Some(else_statements) = consequent.children.first() {
+                        if matches!(else_statements.node_type, NodeType::StatementsNode) {
+                            self.emit_statements(else_statements, indent_level + 1)?;
+                            self.buffer.push('\n');
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Only emit 'end' for the outermost if (not for elsif)
+        if !is_elsif {
+            self.emit_indent(indent_level)?;
+            write!(self.buffer, "end")?;
+        }
 
         Ok(())
     }

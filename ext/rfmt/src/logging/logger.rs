@@ -22,7 +22,11 @@ impl RfmtLogger {
     }
 
     pub fn init() {
-        let logger = Self::new(LevelFilter::Info);
+        let level = std::env::var("RFMT_LOG")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(LevelFilter::Info);
+        let logger = Self::new(level);
         log::set_boxed_logger(Box::new(logger)).expect("Failed to initialize logger");
         log::set_max_level(LevelFilter::Trace);
     }

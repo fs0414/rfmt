@@ -110,7 +110,7 @@ impl Config {
                 for filename in &config_files {
                     let config_path = current_dir.join(filename);
                     if config_path.exists() {
-                        log::debug!("Found config file: {:?}", config_path);
+                        log::info!("Found config file: {:?}", config_path);
                         return Self::load_file(&config_path);
                     }
                 }
@@ -133,7 +133,7 @@ impl Config {
             }
         }
 
-        log::debug!("No config file found, using defaults");
+        log::info!("No config file found, using defaults");
         Ok(Config::default())
     }
 

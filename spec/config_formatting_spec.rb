@@ -117,4 +117,55 @@ RSpec.describe 'Config-based formatting' do
       end
     end
   end
+
+  describe 'config applied to conditionals' do
+    let(:conditional_code) do
+      <<~RUBY
+        def check(x)
+        if x > 0
+        puts "positive"
+        else
+        puts "not positive"
+        end
+        end
+      RUBY
+    end
+
+    it 'applies custom indent_width to if/else blocks' do
+      config_content = <<~YAML
+        version: "1.0"
+        formatting:
+          indent_width: 4
+          indent_style: "spaces"
+      YAML
+      File.write('rfmt.yml', config_content)
+
+      formatted = Rfmt.format(conditional_code)
+
+      # 4 spaces indentation for if/else blocks
+      expect(formatted).to include('    if x > 0')
+      expect(formatted).to include('        puts "positive"')
+      expect(formatted).to include('    else')
+      expect(formatted).to include('        puts "not positive"')
+      expect(formatted).to include('    end')
+    end
+
+    it 'applies indent_style tabs to if/else blocks' do
+      config_content = <<~YAML
+        version: "1.0"
+        formatting:
+          indent_width: 1
+          indent_style: "tabs"
+      YAML
+      File.write('rfmt.yml', config_content)
+
+      formatted = Rfmt.format(conditional_code)
+
+      # Tab indentation for if/else blocks
+      expect(formatted).to include("\tif x > 0")
+      expect(formatted).to include("\t\tputs \"positive\"")
+      expect(formatted).to include("\telse")
+      expect(formatted).to include("\t\tputs \"not positive\"")
+    end
+  end
 end

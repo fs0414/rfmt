@@ -14,6 +14,7 @@ use magnus::{define_module, function, prelude::*, Error, Ruby};
 use parser::{PrismAdapter, RubyParser};
 
 fn format_ruby_code(ruby: &Ruby, source: String, json: String) -> Result<String, Error> {
+    log::info!("format_ruby_code called");
     let policy = SecurityPolicy::default();
 
     policy
@@ -26,7 +27,9 @@ fn format_ruby_code(ruby: &Ruby, source: String, json: String) -> Result<String,
     let ast = parser.parse(&json).map_err(|e| e.to_magnus_error(ruby))?;
 
     // Load configuration from file or use defaults
+    log::info!("Attempting to discover config file...");
     let config = Config::discover().map_err(|e| e.to_magnus_error(ruby))?;
+    log::info!("Config loaded successfully, line_length: {}", config.formatting.line_length);
     let mut emitter = Emitter::with_source(config, source);
 
     let formatted = emitter.emit(&ast).map_err(|e| e.to_magnus_error(ruby))?;

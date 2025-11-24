@@ -40,6 +40,7 @@ pub enum NodeType {
     // Expressions
     CallNode,
     IfNode,
+    ElseNode,
     UnlessNode,
 
     // Literals
@@ -83,6 +84,7 @@ impl NodeType {
             "def_node" => Self::DefNode,
             "call_node" => Self::CallNode,
             "if_node" => Self::IfNode,
+            "else_node" => Self::ElseNode,
             "unless_node" => Self::UnlessNode,
             "string_node" => Self::StringNode,
             "integer_node" => Self::IntegerNode,

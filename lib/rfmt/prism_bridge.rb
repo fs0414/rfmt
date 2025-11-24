@@ -159,6 +159,8 @@ module Rfmt
                        node.statements,
                        node.consequent
                      ].compact
+                   when Prism::ElseNode
+                     [node.statements].compact
                    when Prism::ArrayNode
                      node.elements || []
                    when Prism::HashNode

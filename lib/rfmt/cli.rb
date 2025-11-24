@@ -115,10 +115,10 @@ module Rfmt
     option :force, type: :boolean, desc: 'Overwrite existing configuration'
     option :path, type: :string, default: '.rfmt.yml', desc: 'Configuration file path'
     def init
-      config_file = options[:path]
+      config_file = options[:path] || '.rfmt.yml'
 
       # Use Rfmt::Config module for consistent behavior
-      result = Rfmt::Config.init(config_file, force: options[:force])
+      result = Rfmt::Config.init(config_file, force: options[:force] || false)
 
       if result
         say "Created #{config_file}", :green

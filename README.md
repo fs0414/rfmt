@@ -435,7 +435,7 @@ Everyone interacting in the rfmt project's codebases, issue trackers, chat rooms
 
 <div align="center">
 
-Made with ❤️ by [Fujitani Sora](https://github.com/fujitanisora)
+Made with ❤️ by [Fujitani Sora](https://github.com/fs0414)
 
 **⭐ Star us on GitHub — it motivates us a lot!**
 

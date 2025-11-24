@@ -189,7 +189,7 @@ Create a configuration file with default settings:
 rfmt init
 ```
 
-This creates a `.rfmt.yml` file with default settings:
+This creates a `rfmt.yml` file with default settings:
 
 ```yaml
 version: "1.0"
@@ -227,9 +227,9 @@ rfmt init --force
 
 rfmt automatically searches for configuration files in this order:
 
-1. Current directory (`.rfmt.yml` or `.rfmt.yaml`)
+1. Current directory (`rfmt.yml`, `rfmt.yaml`, `.rfmt.yml`, or `.rfmt.yaml`)
 2. Parent directories (up to root)
-3. User home directory (`~/.rfmt.yml` or `~/.rfmt.yaml`)
+3. User home directory (`rfmt.yml`, `rfmt.yaml`, `.rfmt.yml`, or `.rfmt.yaml`)
 4. Default settings (if no file found)
 
 #### Ruby API for Configuration
@@ -238,11 +238,11 @@ rfmt automatically searches for configuration files in this order:
 require 'rfmt'
 
 # Generate configuration file
-Rfmt::Config.init('.rfmt.yml', force: false)
+Rfmt::Config.init('rfmt.yml', force: false)
 
 # Find configuration file
 config_path = Rfmt::Config.find
-# => "/Users/username/project/.rfmt.yml"
+# => "/Users/username/project/rfmt.yml"
 
 # Check if configuration exists
 Rfmt::Config.exists?

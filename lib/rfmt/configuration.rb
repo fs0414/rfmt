@@ -18,7 +18,7 @@ module Rfmt
       'exclude' => ['vendor/**/*', 'tmp/**/*', 'node_modules/**/*']
     }.freeze
 
-    CONFIG_FILES = ['.rfmt.yml', '.rfmt.yaml', 'rfmt.yml', 'rfmt.yaml'].freeze
+    CONFIG_FILES = ['rfmt.yml', 'rfmt.yaml', '.rfmt.yml', '.rfmt.yaml'].freeze
 
     attr_reader :config
 

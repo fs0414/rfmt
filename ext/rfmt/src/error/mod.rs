@@ -18,7 +18,6 @@ pub enum RfmtError {
     },
 
     #[error("Configuration error: {message}")]
-    #[cfg(test)]
     ConfigError { message: String },
 }
 
@@ -36,7 +35,6 @@ impl RfmtError {
             RfmtError::PrismError(_) => "PrismError",
             RfmtError::FormatError(_) => "FormatError",
             RfmtError::UnsupportedFeature { .. } => "UnsupportedFeature",
-            #[cfg(test)]
             RfmtError::ConfigError { .. } => "ConfigError",
         };
 

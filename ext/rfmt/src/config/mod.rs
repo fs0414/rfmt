@@ -99,8 +99,45 @@ pub enum TrailingComma {
 }
 
 impl Config {
+    /// Discover configuration file in current directory or parent directories
+    /// Searches in order: rfmt.yml, rfmt.yaml, .rfmt.yml, .rfmt.yaml
+    pub fn discover() -> crate::error::Result<Self> {
+        let config_files = ["rfmt.yml", "rfmt.yaml", ".rfmt.yml", ".rfmt.yaml"];
+
+        // Try current directory and parent directories
+        if let Ok(mut current_dir) = std::env::current_dir() {
+            loop {
+                for filename in &config_files {
+                    let config_path = current_dir.join(filename);
+                    if config_path.exists() {
+                        log::debug!("Found config file: {:?}", config_path);
+                        return Self::load_file(&config_path);
+                    }
+                }
+
+                // Move to parent directory
+                if !current_dir.pop() {
+                    break;
+                }
+            }
+        }
+
+        // Try home directory
+        if let Some(home_dir) = dirs::home_dir() {
+            for filename in &config_files {
+                let config_path = home_dir.join(filename);
+                if config_path.exists() {
+                    log::debug!("Found config file in home: {:?}", config_path);
+                    return Self::load_file(&config_path);
+                }
+            }
+        }
+
+        log::debug!("No config file found, using defaults");
+        Ok(Config::default())
+    }
+
     /// Load configuration from a YAML file
-    #[cfg(test)]
     pub fn load_file(path: &std::path::Path) -> crate::error::Result<Self> {
         use crate::error::RfmtError;
 
@@ -119,7 +156,6 @@ impl Config {
     }
 
     /// Validate configuration values
-    #[cfg(test)]
     fn validate(&self) -> crate::error::Result<()> {
         use crate::error::RfmtError;
 
@@ -145,7 +181,6 @@ impl Config {
     }
 
     /// Get the indent string based on configuration
-    #[cfg(test)]
     pub fn indent_string(&self) -> String {
         match self.formatting.indent_style {
             IndentStyle::Spaces => " ".repeat(self.formatting.indent_width),

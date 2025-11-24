@@ -25,7 +25,8 @@ fn format_ruby_code(ruby: &Ruby, source: String, json: String) -> Result<String,
     let parser = PrismAdapter::new();
     let ast = parser.parse(&json).map_err(|e| e.to_magnus_error(ruby))?;
 
-    let config = Config::default();
+    // Load configuration from file or use defaults
+    let config = Config::discover().map_err(|e| e.to_magnus_error(ruby))?;
     let mut emitter = Emitter::with_source(config, source);
 
     let formatted = emitter.emit(&ast).map_err(|e| e.to_magnus_error(ruby))?;

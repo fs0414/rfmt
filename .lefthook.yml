@@ -1,0 +1,30 @@
+# Lefthook configuration for rfmt project
+# See: https://github.com/evilmartians/lefthook
+
+# pre-push: Run linting checks before pushing to remote
+pre-push:
+  parallel: true       # Execute checks in parallel for faster execution
+
+  commands:
+    # Ruby linting with RuboCop
+    rubocop:
+      run: bundle exec rubocop
+      fail_text: "RuboCop failed. Run 'bundle exec rubocop -A' to auto-fix."
+
+    # Rust formatting check
+    rust-fmt:
+      run: cargo fmt --manifest-path ext/rfmt/Cargo.toml -- --check
+      fail_text: "Rust formatting check failed. Run 'cargo fmt --manifest-path ext/rfmt/Cargo.toml' to fix."
+
+    # Rust linting with Clippy
+    clippy:
+      run: cargo clippy --manifest-path ext/rfmt/Cargo.toml -- -D warnings
+      fail_text: "Clippy found issues. Please fix the warnings."
+
+# Skip lefthook execution in CI (GitHub Actions handles validation)
+skip_output:
+  - meta
+  - execution
+
+# Optional: Disable lefthook for specific scenarios
+# Use: LEFTHOOK=0 git push (to skip all hooks)

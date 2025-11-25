@@ -262,6 +262,48 @@ class User < ApplicationRecord
 end
 ```
 
+## Development
+
+### Setup
+
+After cloning the repository:
+
+```bash
+bundle install
+bundle exec lefthook install
+```
+
+### Git Hooks
+
+This project uses [lefthook](https://github.com/evilmartians/lefthook) for automated validation before push:
+
+**Pre-push checks:**
+- RuboCop (Ruby linting)
+- cargo fmt --check (Rust formatting)
+- cargo clippy (Rust linting)
+
+**Skip hooks temporarily:**
+```bash
+# Skip all hooks for this push
+LEFTHOOK=0 git push
+
+# Skip specific hook
+LEFTHOOK_EXCLUDE=rubocop git push
+```
+
+### Running Tests
+
+```bash
+# Ruby tests
+bundle exec rspec
+
+# Rust tests
+cargo test --manifest-path ext/rfmt/Cargo.toml
+
+# All tests
+bundle exec rake dev:test_all
+```
+
 ## Documentation
 
 Documentation is available in the [docs](docs/) directory:

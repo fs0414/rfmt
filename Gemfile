@@ -15,6 +15,7 @@ gem 'parallel', '~> 1.24'
 gem 'thor', '~> 1.3'
 
 # Development
+gem 'lefthook', '~> 1.5'
 gem 'rake', '~> 13.0'
 gem 'rake-compiler', '~> 1.2'
 gem 'rspec', '~> 3.12'

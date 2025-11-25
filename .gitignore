@@ -23,3 +23,7 @@ target/
 # Development
 .rspec_status
 .rake_tasks~
+
+# Lefthook
+.lefthook/
+lefthook-local.yml

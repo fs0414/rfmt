@@ -298,61 +298,6 @@ rescue Rfmt::Error => e
 end
 ```
 
-## エディタ統合
-
-### Visual Studio Code
-
-1. マーケットプレイスから「rfmt」拡張機能をインストール
-2. `settings.json` に追加:
-
-```json
-{
-  "rfmt.enable": true,
-  "rfmt.formatOnSave": true,
-  "rfmt.configPath": ".rfmt.yml"
-}
-```
-
-### RubyMine / IntelliJ IDEA
-
-1. 設定 → ツール → rfmt を開く
-2. 「保存時にrfmtを実行」を有効化
-3. rfmt実行可能ファイルへのパスを設定
-
-### Vim / Neovim
-
-`.vimrc` または `init.vim` に追加:
-
-```vim
-" 保存時にフォーマット
-autocmd BufWritePre *.rb silent! !rfmt format %
-
-" 現在のバッファをフォーマット
-nnoremap <leader>f :!rfmt format %<CR>
-```
-
-### Emacs
-
-`.emacs` または `init.el` に追加:
-
-```elisp
-(defun rfmt-format-buffer ()
-  "rfmtで現在のバッファをフォーマット"
-  (interactive)
-  (shell-command-on-region
-   (point-min) (point-max)
-   "rfmt format -"
-   (current-buffer) t))
-
-(add-hook 'ruby-mode-hook
-  (lambda ()
-    (add-hook 'before-save-hook 'rfmt-format-buffer nil t)))
-```
-
-### Sublime Text
-
-Package Control経由で「rfmt」パッケージをインストール。
-
 ## エラーハンドリング
 
 rfmtは問題を素早く修正するための詳細なエラーメッセージを提供します。

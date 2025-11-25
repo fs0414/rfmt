@@ -297,61 +297,6 @@ rescue Rfmt::Error => e
 end
 ```
 
-## Editor Integration
-
-### Visual Studio Code
-
-1. Install the "rfmt" extension from the marketplace
-2. Add to your `settings.json`:
-
-```json
-{
-  "rfmt.enable": true,
-  "rfmt.formatOnSave": true,
-  "rfmt.configPath": ".rfmt.yml"
-}
-```
-
-### RubyMine / IntelliJ IDEA
-
-1. Open Settings → Tools → rfmt
-2. Enable "Run rfmt on save"
-3. Set path to rfmt executable
-
-### Vim / Neovim
-
-Add to your `.vimrc` or `init.vim`:
-
-```vim
-" Format on save
-autocmd BufWritePre *.rb silent! !rfmt format %
-
-" Format current buffer
-nnoremap <leader>f :!rfmt format %<CR>
-```
-
-### Emacs
-
-Add to your `.emacs` or `init.el`:
-
-```elisp
-(defun rfmt-format-buffer ()
-  "Format current buffer with rfmt."
-  (interactive)
-  (shell-command-on-region
-   (point-min) (point-max)
-   "rfmt format -"
-   (current-buffer) t))
-
-(add-hook 'ruby-mode-hook
-  (lambda ()
-    (add-hook 'before-save-hook 'rfmt-format-buffer nil t)))
-```
-
-### Sublime Text
-
-Install the "rfmt" package via Package Control.
-
 ## Error Handling
 
 rfmt provides detailed error messages to help you fix issues quickly.

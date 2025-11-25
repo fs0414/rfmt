@@ -180,13 +180,6 @@ impl Config {
         Ok(())
     }
 
-    /// Get the indent string based on configuration
-    pub fn indent_string(&self) -> String {
-        match self.formatting.indent_style {
-            IndentStyle::Spaces => " ".repeat(self.formatting.indent_width),
-            IndentStyle::Tabs => "\t".to_string(),
-        }
-    }
 
     /// Check if a file path should be included based on include/exclude patterns
     #[cfg(test)]

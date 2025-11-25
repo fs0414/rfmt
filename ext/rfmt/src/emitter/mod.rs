@@ -406,7 +406,7 @@ impl Emitter {
                 NodeType::ElseNode => {
                     // This is an else clause
                     self.emit_indent(indent_level)?;
-                    write!(self.buffer, "else\n")?;
+                    writeln!(self.buffer, "else")?;
 
                     // Emit else body (first child of ElseNode)
                     if let Some(else_statements) = consequent.children.first() {

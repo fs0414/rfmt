@@ -309,11 +309,18 @@ impl Emitter {
     /// Emit if/unless/elsif/else node
     /// is_elsif: true if this is an elsif clause (don't emit 'end')
     /// keyword: "if" or "unless"
-    fn emit_if_unless(&mut self, node: &Node, indent_level: usize, is_elsif: bool, keyword: &str) -> Result<()> {
+    fn emit_if_unless(
+        &mut self,
+        node: &Node,
+        indent_level: usize,
+        is_elsif: bool,
+        keyword: &str,
+    ) -> Result<()> {
         // Check if this is a postfix if (modifier form)
         // In postfix if, the statements come before the if keyword in source
         let is_postfix = if let (Some(predicate), Some(statements)) =
-            (node.children.first(), node.children.get(1)) {
+            (node.children.first(), node.children.get(1))
+        {
             statements.location.start_offset < predicate.location.start_offset
         } else {
             false

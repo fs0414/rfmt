@@ -82,6 +82,9 @@ Gemspec/DuplicatedAssignment:
 Gemspec/RequiredRubyVersion:
   Enabled: false
 
+Gemspec/RequireMFA:
+  Enabled: false
+
 # Allow missing top-level documentation for internal modules
 Style/Documentation:
   Enabled: false

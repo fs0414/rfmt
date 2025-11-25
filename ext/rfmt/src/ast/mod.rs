@@ -174,6 +174,7 @@ impl Node {
 
     /// Add metadata to the node
     #[cfg(test)]
+    #[allow(dead_code)]
     pub fn with_metadata(mut self, metadata: HashMap<String, String>) -> Self {
         self.metadata = metadata;
         self
@@ -181,6 +182,7 @@ impl Node {
 
     /// Add comments to the node
     #[cfg(test)]
+    #[allow(dead_code)]
     pub fn with_comments(mut self, comments: Vec<Comment>) -> Self {
         self.comments = comments;
         self

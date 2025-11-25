@@ -63,7 +63,6 @@ impl Log for RfmtLogger {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use log::{debug, error, info, trace, warn};
     use std::sync::{Arc, Mutex};
 
     struct TestWriter {

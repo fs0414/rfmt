@@ -22,11 +22,10 @@ A Ruby code formatter written in Rust
 
 **rfmt** is a Ruby code formatter that enforces consistent style across your codebase. Key characteristics:
 
-- **Rust implementation**: Provides faster execution than Ruby-based tools
 - **Opinionated**: Minimal configuration with consistent output
 - **Idempotent**: Running multiple times produces identical results
 - **Comment preservation**: Maintains existing comment placement
-- **Error handling**: Includes structured error messages and logging
+- **Rust implementation**: Core formatter implemented in Rust
 
 ## Features
 
@@ -46,24 +45,6 @@ Enforces code style rules:
 - Spacing and alignment normalization
 - Quote style standardization
 - Method definition formatting
-
-### Error Handling
-
-Provides structured error messages:
-
-- Error codes (E001-E999) for categorization
-- Code snippets showing error locations
-- Help URLs linking to documentation
-- Recovery strategies for handling errors
-
-### Logging
-
-Built-in logging system:
-
-- 5 log levels (ERROR, WARN, INFO, DEBUG, TRACE)
-- Structured output format
-- Performance metrics and timing data
-- Debug context information
 
 ## Performance Benchmarks
 
@@ -132,58 +113,9 @@ bundle exec rake compile
 
 ## Usage
 
-### Command Line
+### Initialize Configuration
 
-Format a single file:
-
-```bash
-rfmt format lib/user.rb
-```
-
-Format multiple files:
-
-```bash
-rfmt format lib/**/*.rb
-```
-
-Check if files need formatting (CI/CD):
-
-```bash
-rfmt check .
-```
-
-### Ruby API
-
-```ruby
-require 'rfmt'
-
-source = <<~RUBY
-  class User
-    def initialize(name)
-      @name=name
-    end
-  end
-RUBY
-
-formatted = Rfmt.format(source)
-puts formatted
-```
-
-**Output:**
-
-```ruby
-class User
-  def initialize(name)
-    @name = name
-  end
-end
-```
-
-### Configuration
-
-#### Initializing Configuration
-
-Create a configuration file with default settings:
+First, create a configuration file with default settings:
 
 ```bash
 rfmt init
@@ -222,6 +154,63 @@ rfmt init --path config/rfmt.yml
 # Overwrite existing configuration
 rfmt init --force
 ```
+
+### Command Line
+
+Format a single file:
+
+```bash
+rfmt format lib/user.rb
+```
+
+Format multiple files:
+
+```bash
+rfmt format lib/**/*.rb
+```
+
+Check if files need formatting (CI/CD):
+
+```bash
+rfmt check .
+```
+
+Show diff without modifying files:
+
+```bash
+rfmt format lib/user.rb --diff
+```
+
+### Ruby API
+
+**Input (unformatted code):**
+
+```ruby
+require 'rfmt'
+
+source = <<~RUBY
+  class User
+  def initialize(name)
+  @name=name
+  end
+  end
+RUBY
+
+formatted = Rfmt.format(source)
+puts formatted
+```
+
+**Output (formatted code):**
+
+```ruby
+class User
+  def initialize(name)
+    @name=name
+  end
+end
+```
+
+### Configuration
 
 #### Configuration File Discovery
 

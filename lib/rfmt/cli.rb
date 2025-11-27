@@ -76,15 +76,22 @@ module Rfmt
         original_count = files.size
         files = files.select { |file| cache.needs_formatting?(file) }
         skipped = original_count - files.size
-        say "Skipped #{skipped} unchanged file(s) (cache hit)", :blue if skipped.positive? && options[:verbose]
+        if skipped.positive?
+          say "ℹ Skipped #{skipped} unchanged file(s) (cached)", :cyan if options[:verbose]
+        end
       end
 
       if files.empty?
-        say 'All files are already formatted', :green
+        say '✓ All files are already formatted (cached)', :green
         return
       end
 
-      say "Formatting #{files.size} file(s)...", :blue if options[:verbose]
+      # Show progress message
+      if files.size == 1
+        say "Processing #{files.first}...", :blue
+      else
+        say "Processing #{files.size} file(s)...", :blue
+      end
 
       results = if options[:parallel] && files.size > 1
                   format_files_parallel(files)
@@ -206,7 +213,8 @@ module Rfmt
             show_diff(result[:file], result[:original], result[:formatted])
           elsif options[:write]
             File.write(result[:file], result[:formatted])
-            say "Formatted #{result[:file]}", :green if options[:verbose]
+            # Always show formatted files (not just in verbose mode)
+            say "✓ Formatted #{result[:file]}", :green
 
             # Update cache after successful write
             cache&.mark_formatted(result[:file])
@@ -214,7 +222,10 @@ module Rfmt
             puts result[:formatted]
           end
         else
-          say "#{result[:file]} already formatted", :blue if options[:verbose]
+          # Show already formatted files in non-check mode
+          unless options[:check]
+            say "✓ #{result[:file]} already formatted", :cyan
+          end
 
           # Update cache even if no changes (file was checked)
           cache&.mark_formatted(result[:file])
@@ -224,10 +235,27 @@ module Rfmt
       # Save cache to disk
       cache&.save
 
-      # Summary
-      say "\n#{results.size} file(s) processed", :blue if options[:verbose]
-      say "#{changed_count} file(s) changed", :yellow if changed_count.positive? && options[:verbose]
-      say "#{error_count} error(s)", :red if error_count.positive?
+      # Summary - always show a summary message
+      if error_count.positive?
+        say "\n✗ Failed: #{error_count} error(s) occurred", :red
+      elsif options[:check] && failed_count.positive?
+        say "\n✗ Check failed: #{failed_count} file(s) need formatting", :yellow
+      else
+        # Success message with appropriate details
+        if changed_count.positive?
+          say "\n✓ Success! Formatted #{changed_count} file(s)", :green
+        elsif results.size == 1
+          say "\n✓ Success! File is already formatted", :green
+        else
+          say "\n✓ Success! All #{results.size} files are already formatted", :green
+        end
+      end
+
+      # Detailed summary in verbose mode
+      if options[:verbose]
+        say "Total: #{results.size} file(s) processed", :blue
+        say "Changed: #{changed_count} file(s)", :yellow if changed_count.positive?
+      end
 
       exit(1) if (options[:check] && failed_count.positive?) || error_count.positive?
     end

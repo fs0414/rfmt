@@ -76,9 +76,7 @@ module Rfmt
         original_count = files.size
         files = files.select { |file| cache.needs_formatting?(file) }
         skipped = original_count - files.size
-        if skipped.positive?
-          say "ℹ Skipped #{skipped} unchanged file(s) (cached)", :cyan if options[:verbose]
-        end
+        say "ℹ Skipped #{skipped} unchanged file(s) (cached)", :cyan if skipped.positive? && options[:verbose]
       end
 
       if files.empty?
@@ -223,9 +221,7 @@ module Rfmt
           end
         else
           # Show already formatted files in non-check mode
-          unless options[:check]
-            say "✓ #{result[:file]} already formatted", :cyan
-          end
+          say "✓ #{result[:file]} already formatted", :cyan unless options[:check]
 
           # Update cache even if no changes (file was checked)
           cache&.mark_formatted(result[:file])
@@ -240,15 +236,13 @@ module Rfmt
         say "\n✗ Failed: #{error_count} error(s) occurred", :red
       elsif options[:check] && failed_count.positive?
         say "\n✗ Check failed: #{failed_count} file(s) need formatting", :yellow
-      else
+      elsif changed_count.positive?
         # Success message with appropriate details
-        if changed_count.positive?
-          say "\n✓ Success! Formatted #{changed_count} file(s)", :green
-        elsif results.size == 1
-          say "\n✓ Success! File is already formatted", :green
-        else
-          say "\n✓ Success! All #{results.size} files are already formatted", :green
-        end
+        say "\n✓ Success! Formatted #{changed_count} file(s)", :green
+      elsif results.size == 1
+        say "\n✓ Success! File is already formatted", :green
+      else
+        say "\n✓ Success! All #{results.size} files are already formatted", :green
       end
 
       # Detailed summary in verbose mode

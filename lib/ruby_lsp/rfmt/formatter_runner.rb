@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "rfmt"
+require 'rfmt'
 
 module RubyLsp
   module Rfmt
@@ -8,7 +8,7 @@ module RubyLsp
       # @param uri [URI::Generic] Document URI
       # @param document [RubyLsp::RubyDocument] Target document
       # @return [String, nil] Formatted text or nil on error
-      def run_formatting(uri, document)
+      def run_formatting(_uri, document)
         source = document.source
         ::Rfmt.format(source)
       rescue ::Rfmt::Error
@@ -18,7 +18,7 @@ module RubyLsp
       # @param uri [URI::Generic] Document URI
       # @param document [RubyLsp::RubyDocument] Target document
       # @return [Array<RubyLsp::Interface::Diagnostic>]
-      def run_diagnostic(uri, document)
+      def run_diagnostic(_uri, _document)
         []
       end
     end

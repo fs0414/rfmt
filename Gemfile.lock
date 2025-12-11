@@ -109,7 +109,6 @@ DEPENDENCIES
   prism (~> 1.6.0)
   rake (~> 13.0)
   rake-compiler (~> 1.2)
-  rbs (~> 3.5)
   rdoc (< 6.7)
   rfmt!
   rspec (~> 3.12)

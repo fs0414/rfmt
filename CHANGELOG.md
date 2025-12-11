@@ -5,6 +5,9 @@
 ### Breaking Changes
 - First stable release (v1.0.0)
 
+### Added
+- Neovim integration: format-on-save support with autocmd configuration
+
 ### Changed
 - Set JSON as default output format
 - Updated Japanese documentation

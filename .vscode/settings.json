@@ -1,0 +1,8 @@
+{
+    "rubyLsp.formatter": "rfmt",
+    "editor.formatOnSave": true,
+    "rubyLsp.rubyVersionManager": "none",
+    "[ruby]": {
+      "editor.defaultFormatter": "Shopify.ruby-lsp"
+    }
+}

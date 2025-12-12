@@ -28,6 +28,22 @@ RSpec.describe Rfmt do
         Rfmt.format(invalid_source)
       end.to raise_error(Rfmt::Error)
     end
+
+    it 'formats Rails migration with versioned superclass' do
+      source = <<~RUBY
+        class AddProfileToUsers < ActiveRecord::Migration[8.1]
+          def change
+            add_column :users, :profile, :text
+          end
+        end
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('class AddProfileToUsers < ActiveRecord::Migration[8.1]')
+      expect(result).to include('def change')
+      expect(result).not_to include('Prism::CallNode')
+    end
   end
 
   describe '.version_info' do

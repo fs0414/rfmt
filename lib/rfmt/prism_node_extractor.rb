@@ -27,16 +27,25 @@ module Rfmt
       when Prism::ConstantReadNode
         sc.name.to_s
       when Prism::ConstantPathNode
-        # Try full_name first, fall back to name
+        # Try full_name first, fall back to slice for original source
         if sc.respond_to?(:full_name)
           sc.full_name.to_s
-        elsif sc.respond_to?(:name)
-          sc.name.to_s
+        elsif sc.respond_to?(:slice)
+          sc.slice
         else
-          sc.to_s
+          sc.location.slice
         end
+      when Prism::CallNode
+        # Handle cases like ActiveRecord::Migration[8.1]
+        # Use slice to get the original source text
+        sc.slice
       else
-        sc.to_s
+        # Fallback: try to get original source text
+        if sc.respond_to?(:slice)
+          sc.slice
+        else
+          sc.location.slice
+        end
       end
     end
 

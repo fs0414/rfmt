@@ -660,6 +660,8 @@ impl Emitter {
                 | NodeType::OptionalParameterNode
                 | NodeType::RestParameterNode
                 | NodeType::KeywordParameterNode
+                | NodeType::RequiredKeywordParameterNode
+                | NodeType::OptionalKeywordParameterNode
                 | NodeType::KeywordRestParameterNode
                 | NodeType::BlockParameterNode
         )

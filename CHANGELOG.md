@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+## [1.1.0] - 2025-12-12
+
+### Added
+- Editor integration (Ruby LSP support)
+- Required/Optional keyword parameter node type support
+
+### Fixed
+- Migration file superclass corruption (ActiveRecord::Migration[8.1] etc.)
+
+### Changed
+- Removed unused scripts and test files (reduced Ruby code by ~38%)
+
 ## [1.0.0] - 2025-12-11
 
 ### Breaking Changes

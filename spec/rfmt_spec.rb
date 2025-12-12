@@ -44,6 +44,37 @@ RSpec.describe Rfmt do
       expect(result).to include('def change')
       expect(result).not_to include('Prism::CallNode')
     end
+
+    it 'formats method with required keyword parameters' do
+      source = <<~RUBY
+        def initialize(frame:, form:, tag_map:)
+          @frame = frame
+          @form = form
+          @tag_map = tag_map
+        end
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('def initialize(frame:, form:, tag_map:)')
+      expect(result).not_to match(/frame:\s+form:\s+tag_map:/)
+      expect(result).to include('@frame = frame')
+    end
+
+    it 'formats method with optional keyword parameters' do
+      source = <<~RUBY
+        def configure(timeout: 30, retries: 3)
+          @timeout = timeout
+          @retries = retries
+        end
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('def configure(timeout: 30, retries: 3)')
+      expect(result).not_to match(/timeout:\s+30\s+retries:/)
+      expect(result).to include('@timeout = timeout')
+    end
   end
 
   describe '.version_info' do

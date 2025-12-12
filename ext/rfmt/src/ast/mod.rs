@@ -66,6 +66,8 @@ pub enum NodeType {
     OptionalParameterNode,
     RestParameterNode,
     KeywordParameterNode,
+    RequiredKeywordParameterNode,
+    OptionalKeywordParameterNode,
     KeywordRestParameterNode,
     BlockParameterNode,
 
@@ -102,6 +104,8 @@ impl NodeType {
             "optional_parameter_node" => Self::OptionalParameterNode,
             "rest_parameter_node" => Self::RestParameterNode,
             "keyword_parameter_node" => Self::KeywordParameterNode,
+            "required_keyword_parameter_node" => Self::RequiredKeywordParameterNode,
+            "optional_keyword_parameter_node" => Self::OptionalKeywordParameterNode,
             "keyword_rest_parameter_node" => Self::KeywordRestParameterNode,
             "block_parameter_node" => Self::BlockParameterNode,
             _ => Self::Unknown(s.to_string()),

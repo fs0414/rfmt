@@ -46,10 +46,15 @@ impl Emitter {
         self.buffer.clear();
         self.emitted_comment_indices.clear();
 
-        // Collect all comments from the AST
         self.collect_comments(ast);
 
         self.emit_node(ast, 0)?;
+
+        // Ensure file ends with a newline
+        if !self.buffer.ends_with('\n') {
+            self.buffer.push('\n');
+        }
+
         Ok(self.buffer.clone())
     }
 
@@ -68,22 +73,26 @@ impl Emitter {
             IndentStyle::Tabs => "\t".repeat(indent_level),
         };
 
-        let mut indices_to_emit = Vec::new();
+        let mut comments_to_emit = Vec::new();
         for (idx, comment) in self.all_comments.iter().enumerate() {
             if self.emitted_comment_indices.contains(&idx) {
                 continue;
             }
 
-            // Collect comments that end before this line
             if comment.location.end_line < line {
-                indices_to_emit.push((idx, comment.text.clone()));
+                comments_to_emit.push((idx, comment.text.clone(), comment.location.end_line));
             }
         }
 
-        // Now emit the collected comments
-        for (idx, text) in indices_to_emit {
+        let comments_count = comments_to_emit.len();
+        for (i, (idx, text, comment_end_line)) in comments_to_emit.into_iter().enumerate() {
             writeln!(self.buffer, "{}{}", indent_str, text)?;
             self.emitted_comment_indices.push(idx);
+
+            // Only add blank line after the LAST comment if there was a gap in the original
+            if i == comments_count - 1 && line > comment_end_line + 1 {
+                self.buffer.push('\n');
+            }
         }
 
         Ok(())

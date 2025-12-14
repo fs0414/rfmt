@@ -123,6 +123,8 @@ impl Emitter {
             NodeType::IfNode => self.emit_if_unless(node, indent_level, false, "if")?,
             NodeType::UnlessNode => self.emit_if_unless(node, indent_level, false, "unless")?,
             NodeType::CallNode => self.emit_call(node, indent_level)?,
+            NodeType::BeginNode => self.emit_begin(node, indent_level)?,
+            NodeType::RescueNode => self.emit_rescue(node, indent_level)?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -310,6 +312,62 @@ impl Emitter {
 
         self.emit_indent(indent_level)?;
         write!(self.buffer, "end")?;
+
+        Ok(())
+    }
+
+    /// Emit begin node (wraps method body when rescue/ensure is present)
+    /// BeginNode is used by Prism to wrap method bodies that have rescue/ensure clauses.
+    /// We emit its children directly without the begin/end keywords since the parent
+    /// def already provides the block structure.
+    fn emit_begin(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        for (i, child) in node.children.iter().enumerate() {
+            // Add newline before rescue/ensure clauses
+            if i > 0 {
+                self.buffer.push('\n');
+            }
+            self.emit_node(child, indent_level)?;
+        }
+        Ok(())
+    }
+
+    /// Emit rescue node
+    fn emit_rescue(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        // Rescue node structure:
+        // - First children are exception class references (ConstantReadNode)
+        // - Then exception variable (LocalVariableTargetNode)
+        // - Last child is StatementsNode with the rescue body
+
+        // Dedent by 1 level since rescue is at the same level as method body
+        let rescue_indent = indent_level.saturating_sub(1);
+        self.emit_indent(rescue_indent)?;
+        write!(self.buffer, "rescue")?;
+
+        // Extract exception classes and variable from source
+        if !self.source.is_empty() && node.location.end_offset <= self.source.len() {
+            if let Some(source_text) = self
+                .source
+                .get(node.location.start_offset..node.location.end_offset)
+            {
+                // Get the rescue line to extract exception class and variable
+                if let Some(rescue_line) = source_text.lines().next() {
+                    // Remove "rescue" prefix and get the rest (exception class => var)
+                    let after_rescue = rescue_line.trim_start_matches("rescue").trim();
+                    if !after_rescue.is_empty() {
+                        write!(self.buffer, " {}", after_rescue)?;
+                    }
+                }
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit rescue body (last child is typically StatementsNode)
+        if let Some(body) = node.children.last() {
+            if matches!(body.node_type, NodeType::StatementsNode) {
+                self.emit_node(body, indent_level)?;
+            }
+        }
 
         Ok(())
     }

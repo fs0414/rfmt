@@ -172,6 +172,18 @@ module Rfmt
                                 []
                               end
                      params + [node.body].compact
+                   when Prism::BeginNode
+                     [
+                       node.statements,
+                       node.rescue_clause
+                     ].compact
+                   when Prism::RescueNode
+                     result = []
+                     result.concat(node.exceptions) if node.exceptions
+                     result << node.reference if node.reference
+                     result << node.statements if node.statements
+                     result << node.subsequent if node.subsequent
+                     result
                    else
                      # For unknown types, try to get child nodes if they exist
                      []

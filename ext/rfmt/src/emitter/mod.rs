@@ -46,10 +46,15 @@ impl Emitter {
         self.buffer.clear();
         self.emitted_comment_indices.clear();
 
-        // Collect all comments from the AST
         self.collect_comments(ast);
 
         self.emit_node(ast, 0)?;
+
+        // Ensure file ends with a newline
+        if !self.buffer.ends_with('\n') {
+            self.buffer.push('\n');
+        }
+
         Ok(self.buffer.clone())
     }
 
@@ -68,22 +73,26 @@ impl Emitter {
             IndentStyle::Tabs => "\t".repeat(indent_level),
         };
 
-        let mut indices_to_emit = Vec::new();
+        let mut comments_to_emit = Vec::new();
         for (idx, comment) in self.all_comments.iter().enumerate() {
             if self.emitted_comment_indices.contains(&idx) {
                 continue;
             }
 
-            // Collect comments that end before this line
             if comment.location.end_line < line {
-                indices_to_emit.push((idx, comment.text.clone()));
+                comments_to_emit.push((idx, comment.text.clone(), comment.location.end_line));
             }
         }
 
-        // Now emit the collected comments
-        for (idx, text) in indices_to_emit {
+        let comments_count = comments_to_emit.len();
+        for (i, (idx, text, comment_end_line)) in comments_to_emit.into_iter().enumerate() {
             writeln!(self.buffer, "{}{}", indent_str, text)?;
             self.emitted_comment_indices.push(idx);
+
+            // Only add blank line after the LAST comment if there was a gap in the original
+            if i == comments_count - 1 && line > comment_end_line + 1 {
+                self.buffer.push('\n');
+            }
         }
 
         Ok(())
@@ -123,6 +132,8 @@ impl Emitter {
             NodeType::IfNode => self.emit_if_unless(node, indent_level, false, "if")?,
             NodeType::UnlessNode => self.emit_if_unless(node, indent_level, false, "unless")?,
             NodeType::CallNode => self.emit_call(node, indent_level)?,
+            NodeType::BeginNode => self.emit_begin(node, indent_level)?,
+            NodeType::RescueNode => self.emit_rescue(node, indent_level)?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -154,14 +165,28 @@ impl Emitter {
         for (i, child) in node.children.iter().enumerate() {
             self.emit_node(child, indent_level)?;
 
-            // Add newlines between statements, normalizing to max 1 blank line
             if i < node.children.len() - 1 {
                 let current_end_line = child.location.end_line;
-                let next_start_line = node.children[i + 1].location.start_line;
-                let line_diff = next_start_line.saturating_sub(current_end_line);
+                let next_child = &node.children[i + 1];
+                let next_start_line = next_child.location.start_line;
 
-                // Add 1 newline if consecutive, 2 newlines (1 blank line) if there was a gap
+                // Find the first comment between current and next node (if any)
+                let first_comment_line = self
+                    .all_comments
+                    .iter()
+                    .filter(|c| {
+                        c.location.start_line > current_end_line
+                            && c.location.end_line < next_start_line
+                    })
+                    .map(|c| c.location.start_line)
+                    .min();
+
+                // Calculate line diff based on whether there's a comment
+                let effective_next_line = first_comment_line.unwrap_or(next_start_line);
+                let line_diff = effective_next_line.saturating_sub(current_end_line);
+
                 let newlines = if line_diff > 1 { 2 } else { 1 };
+
                 for _ in 0..newlines {
                     self.buffer.push('\n');
                 }
@@ -310,6 +335,62 @@ impl Emitter {
 
         self.emit_indent(indent_level)?;
         write!(self.buffer, "end")?;
+
+        Ok(())
+    }
+
+    /// Emit begin node (wraps method body when rescue/ensure is present)
+    /// BeginNode is used by Prism to wrap method bodies that have rescue/ensure clauses.
+    /// We emit its children directly without the begin/end keywords since the parent
+    /// def already provides the block structure.
+    fn emit_begin(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        for (i, child) in node.children.iter().enumerate() {
+            // Add newline before rescue/ensure clauses
+            if i > 0 {
+                self.buffer.push('\n');
+            }
+            self.emit_node(child, indent_level)?;
+        }
+        Ok(())
+    }
+
+    /// Emit rescue node
+    fn emit_rescue(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        // Rescue node structure:
+        // - First children are exception class references (ConstantReadNode)
+        // - Then exception variable (LocalVariableTargetNode)
+        // - Last child is StatementsNode with the rescue body
+
+        // Dedent by 1 level since rescue is at the same level as method body
+        let rescue_indent = indent_level.saturating_sub(1);
+        self.emit_indent(rescue_indent)?;
+        write!(self.buffer, "rescue")?;
+
+        // Extract exception classes and variable from source
+        if !self.source.is_empty() && node.location.end_offset <= self.source.len() {
+            if let Some(source_text) = self
+                .source
+                .get(node.location.start_offset..node.location.end_offset)
+            {
+                // Get the rescue line to extract exception class and variable
+                if let Some(rescue_line) = source_text.lines().next() {
+                    // Remove "rescue" prefix and get the rest (exception class => var)
+                    let after_rescue = rescue_line.trim_start_matches("rescue").trim();
+                    if !after_rescue.is_empty() {
+                        write!(self.buffer, " {}", after_rescue)?;
+                    }
+                }
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit rescue body (last child is typically StatementsNode)
+        if let Some(body) = node.children.last() {
+            if matches!(body.node_type, NodeType::StatementsNode) {
+                self.emit_node(body, indent_level)?;
+            }
+        }
 
         Ok(())
     }
@@ -616,22 +697,29 @@ impl Emitter {
 
     /// Emit generic node by extracting from source
     fn emit_generic(&mut self, node: &Node, indent_level: usize) -> Result<()> {
-        // Emit any comments before this node
         self.emit_comments_before(node.location.start_line, indent_level)?;
 
         if !self.source.is_empty() {
             let start = node.location.start_offset;
             let end = node.location.end_offset;
 
-            // Clone text first to avoid borrow conflict
             let text_owned = self.source.get(start..end).map(|s| s.to_string());
 
             if let Some(text) = text_owned {
-                // Add indentation before the extracted text
                 self.emit_indent(indent_level)?;
                 write!(self.buffer, "{}", text)?;
 
-                // Emit any trailing comments on the same line
+                // Mark comments within this node's range as emitted
+                // (they are included in the source extraction)
+                for (idx, comment) in self.all_comments.iter().enumerate() {
+                    if !self.emitted_comment_indices.contains(&idx)
+                        && comment.location.start_line >= node.location.start_line
+                        && comment.location.end_line <= node.location.end_line
+                    {
+                        self.emitted_comment_indices.push(idx);
+                    }
+                }
+
                 self.emit_trailing_comments(node.location.end_line)?;
             }
         }

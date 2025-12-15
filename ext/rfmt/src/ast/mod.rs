@@ -43,6 +43,10 @@ pub enum NodeType {
     ElseNode,
     UnlessNode,
 
+    // Exception handling
+    BeginNode,
+    RescueNode,
+
     // Literals
     StringNode,
     IntegerNode,
@@ -88,6 +92,8 @@ impl NodeType {
             "if_node" => Self::IfNode,
             "else_node" => Self::ElseNode,
             "unless_node" => Self::UnlessNode,
+            "begin_node" => Self::BeginNode,
+            "rescue_node" => Self::RescueNode,
             "string_node" => Self::StringNode,
             "integer_node" => Self::IntegerNode,
             "float_node" => Self::FloatNode,

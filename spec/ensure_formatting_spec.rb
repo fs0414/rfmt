@@ -41,4 +41,23 @@ RSpec.describe Rfmt, 'Ensure Formatting' do
       expect(result).to include('release_memory')
     end
   end
+
+  describe 'explicit begin...end block' do
+    it 'formats top-level begin-ensure block with begin/end keywords' do
+      source = "begin\nrisky_operation\nensure\ncleanup\nend"
+      result = Rfmt.format(source)
+      expect(result).to include('begin')
+      expect(result).to include('end')
+      expect(result).to include('ensure')
+    end
+
+    it 'formats top-level begin-rescue-ensure block' do
+      source = "begin\nrisky\nrescue => e\nhandle(e)\nensure\ncleanup\nend"
+      result = Rfmt.format(source)
+      expect(result).to include('begin')
+      expect(result).to include('rescue => e')
+      expect(result).to include('ensure')
+      expect(result).to include('end')
+    end
+  end
 end

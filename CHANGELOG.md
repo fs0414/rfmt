@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.2.4] - 2026-01-04
+
+### Fixed
+- Fix comment indent space handling
+
 ## [1.2.3] - 2026-01-04
 
 ### Fixed

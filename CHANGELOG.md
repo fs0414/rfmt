@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.2.1] - 2026-01-04
+
+### Fixed
+- Ruby 3.4 compatibility: Fix `Digest::SHA256::metadata is not initialized properly` error by using `Digest::SHA2.new(256)` instead of `Digest::SHA256`
+
 ## [1.2.0] - 2026-01-04
 
 ### Added

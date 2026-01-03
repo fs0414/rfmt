@@ -111,6 +111,7 @@ RSpec.describe Rfmt, 'Node Types' do
     end
   end
 
+  # rubocop:disable Lint/InterpolationCheck
   describe 'String interpolation' do
     it 'formats simple interpolation' do
       source = '"Hello, #{name}!"'
@@ -137,4 +138,5 @@ RSpec.describe Rfmt, 'Node Types' do
       expect(result).to include('#{user.name.upcase}')
     end
   end
+  # rubocop:enable Lint/InterpolationCheck
 end

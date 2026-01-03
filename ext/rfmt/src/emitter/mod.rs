@@ -138,6 +138,9 @@ impl Emitter {
             NodeType::LambdaNode => self.emit_lambda(node, indent_level)?,
             NodeType::CaseNode => self.emit_case(node, indent_level)?,
             NodeType::WhenNode => self.emit_when(node, indent_level)?,
+            NodeType::WhileNode => self.emit_while_until(node, indent_level, "while")?,
+            NodeType::UntilNode => self.emit_while_until(node, indent_level, "until")?,
+            NodeType::ForNode => self.emit_for(node, indent_level)?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -893,6 +896,107 @@ impl Emitter {
         };
 
         write!(self.buffer, "{}", indent_str)?;
+        Ok(())
+    }
+
+    /// Emit while/until loop
+    fn emit_while_until(&mut self, node: &Node, indent_level: usize, keyword: &str) -> Result<()> {
+        // Check if this is a postfix while/until (modifier form)
+        // In postfix form: "statement while/until condition"
+        // Check if body starts before predicate in source
+        let is_postfix = if node.children.len() >= 2 {
+            let predicate = &node.children[0];
+            let body = &node.children[1];
+            body.location.start_offset < predicate.location.start_offset
+        } else {
+            false
+        };
+
+        if is_postfix {
+            // Postfix form: extract from source as-is
+            return self.emit_generic(node, indent_level);
+        }
+
+        // Normal while/until with do...end
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "{} ", keyword)?;
+
+        // Emit predicate (condition) - first child
+        if let Some(predicate) = node.children.first() {
+            if !self.source.is_empty() {
+                let start = predicate.location.start_offset;
+                let end = predicate.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, "{}", text)?;
+                }
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit body - second child (StatementsNode)
+        if let Some(body) = node.children.get(1) {
+            if matches!(body.node_type, NodeType::StatementsNode) {
+                self.emit_statements(body, indent_level + 1)?;
+                self.buffer.push('\n');
+            }
+        }
+
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "end")?;
+
+        Ok(())
+    }
+
+    /// Emit for loop
+    fn emit_for(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "for ")?;
+
+        // node.children: [index, collection, statements]
+        // index: LocalVariableTargetNode or MultiTargetNode
+        // collection: expression
+        // statements: StatementsNode
+
+        // Emit index variable - first child
+        if let Some(index) = node.children.first() {
+            if !self.source.is_empty() {
+                let start = index.location.start_offset;
+                let end = index.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, "{}", text)?;
+                }
+            }
+        }
+
+        write!(self.buffer, " in ")?;
+
+        // Emit collection - second child
+        if let Some(collection) = node.children.get(1) {
+            if !self.source.is_empty() {
+                let start = collection.location.start_offset;
+                let end = collection.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, "{}", text)?;
+                }
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit body - third child (StatementsNode)
+        if let Some(body) = node.children.get(2) {
+            if matches!(body.node_type, NodeType::StatementsNode) {
+                self.emit_statements(body, indent_level + 1)?;
+                self.buffer.push('\n');
+            }
+        }
+
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "end")?;
+
         Ok(())
     }
 

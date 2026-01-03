@@ -214,6 +214,35 @@ module Rfmt
                      [node.predicate, *node.conditions, node.else_clause].compact
                    when Prism::WhenNode
                      [*node.conditions, node.statements].compact
+                   when Prism::WhileNode, Prism::UntilNode
+                     [node.predicate, node.statements].compact
+                   when Prism::ForNode
+                     [node.index, node.collection, node.statements].compact
+                   when Prism::BreakNode, Prism::NextNode
+                     node.arguments ? node.arguments.child_nodes.compact : []
+                   when Prism::RedoNode, Prism::RetryNode
+                     []
+                   when Prism::YieldNode
+                     node.arguments ? node.arguments.child_nodes.compact : []
+                   when Prism::SuperNode
+                     result = []
+                     result.concat(node.arguments.child_nodes.compact) if node.arguments
+                     result << node.block if node.block
+                     result
+                   when Prism::ForwardingSuperNode
+                     node.block ? [node.block] : []
+                   when Prism::RescueModifierNode
+                     [node.expression, node.rescue_expression].compact
+                   when Prism::RangeNode
+                     [node.left, node.right].compact
+                   when Prism::RegularExpressionNode
+                     []
+                   when Prism::SplatNode
+                     [node.expression].compact
+                   when Prism::AndNode
+                     [node.left, node.right].compact
+                   when Prism::NotNode
+                     [node.expression].compact
                    else
                      # For unknown types, try to get child nodes if they exist
                      []

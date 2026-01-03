@@ -88,6 +88,30 @@ pub enum NodeType {
 
     // Logical
     OrNode,
+    AndNode,
+    NotNode,
+
+    // Loop constructs
+    WhileNode,
+    UntilNode,
+    ForNode,
+
+    // Control flow
+    BreakNode,
+    NextNode,
+    RedoNode,
+    RetryNode,
+    YieldNode,
+    SuperNode,
+    ForwardingSuperNode,
+    RescueModifierNode,
+
+    // Ranges
+    RangeNode,
+
+    // Other literals
+    RegularExpressionNode,
+    SplatNode,
 
     // Constants (structural nodes, part of definitions)
     ConstantReadNode,
@@ -156,6 +180,22 @@ impl NodeType {
             "interpolated_string_node" => Self::InterpolatedStringNode,
             "embedded_statements_node" => Self::EmbeddedStatementsNode,
             "or_node" => Self::OrNode,
+            "and_node" => Self::AndNode,
+            "not_node" => Self::NotNode,
+            "while_node" => Self::WhileNode,
+            "until_node" => Self::UntilNode,
+            "for_node" => Self::ForNode,
+            "break_node" => Self::BreakNode,
+            "next_node" => Self::NextNode,
+            "redo_node" => Self::RedoNode,
+            "retry_node" => Self::RetryNode,
+            "yield_node" => Self::YieldNode,
+            "super_node" => Self::SuperNode,
+            "forwarding_super_node" => Self::ForwardingSuperNode,
+            "rescue_modifier_node" => Self::RescueModifierNode,
+            "range_node" => Self::RangeNode,
+            "regular_expression_node" => Self::RegularExpressionNode,
+            "splat_node" => Self::SplatNode,
             _ => Self::Unknown(s.to_string()),
         }
     }

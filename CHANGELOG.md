@@ -1,5 +1,27 @@
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-04
+
+### Added
+- Loop node types support (`for`, `while`, `until`)
+- Case/When statement support
+- Ensure and Lambda node support
+- Begin/End block handling for explicit `begin...end` blocks
+- High-priority node types support
+- Medium-priority node types support
+- Prism supported node viewer task
+
+### Changed
+- Consolidated and simplified test suite
+
+### Fixed
+- Exclude `.DS_Store` from Git tracking (@topi0247)
+- Repository URL changed from `fujitanisora` to `fs0414` (@topi0247)
+- End line space handling
+- Comment location fix
+- End expression indent fix
+- Begin formatting fix
+
 ## [1.1.0] - 2025-12-12
 
 ### Added

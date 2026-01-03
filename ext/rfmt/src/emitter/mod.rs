@@ -1167,18 +1167,6 @@ impl Emitter {
                 | NodeType::BlockParameterNode
         )
     }
-
-    /// Check if this node is part of class definition structure (name, superclass)
-    /// These should be skipped when emitting class body
-    fn is_class_structural_child(&self, node: &Node, class_node: &Node) -> bool {
-        // Skip nodes that are on the same line as the class definition
-        // These are typically the class name and superclass
-        if node.location.start_line == class_node.location.start_line {
-            return true;
-        }
-        // Also check for structural node types
-        self.is_structural_node(&node.node_type)
-    }
 }
 
 impl Default for Emitter {

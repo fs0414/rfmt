@@ -134,6 +134,8 @@ impl Emitter {
             NodeType::CallNode => self.emit_call(node, indent_level)?,
             NodeType::BeginNode => self.emit_begin(node, indent_level)?,
             NodeType::RescueNode => self.emit_rescue(node, indent_level)?,
+            NodeType::EnsureNode => self.emit_ensure(node, indent_level)?,
+            NodeType::LambdaNode => self.emit_lambda(node, indent_level)?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -393,6 +395,39 @@ impl Emitter {
         }
 
         Ok(())
+    }
+
+    /// Emit ensure node
+    fn emit_ensure(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        // ensure keyword should be at same level as begin/rescue
+        let ensure_indent = indent_level.saturating_sub(1);
+
+        self.emit_comments_before(node.location.start_line, ensure_indent)?;
+        self.emit_indent(ensure_indent)?;
+        writeln!(self.buffer, "ensure")?;
+
+        // Emit ensure body statements
+        for child in &node.children {
+            match &child.node_type {
+                NodeType::StatementsNode => {
+                    self.emit_statements(child, indent_level)?;
+                }
+                _ => {
+                    self.emit_node(child, indent_level)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Emit lambda node
+    fn emit_lambda(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+
+        // Lambda syntax is complex (-> vs lambda, {} vs do-end)
+        // Use source extraction to preserve original style
+        self.emit_generic_without_comments(node, indent_level)
     }
 
     /// Emit if/unless/elsif/else node

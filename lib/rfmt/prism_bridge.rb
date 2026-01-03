@@ -243,6 +243,56 @@ module Rfmt
                      [node.left, node.right].compact
                    when Prism::NotNode
                      [node.expression].compact
+                   when Prism::InterpolatedRegularExpressionNode, Prism::InterpolatedSymbolNode,
+                        Prism::InterpolatedXStringNode
+                     node.parts || []
+                   when Prism::XStringNode
+                     []
+                   when Prism::ClassVariableReadNode, Prism::GlobalVariableReadNode, Prism::SelfNode
+                     []
+                   when Prism::ClassVariableWriteNode, Prism::GlobalVariableWriteNode
+                     [node.value].compact
+                   when Prism::ClassVariableOrWriteNode, Prism::ClassVariableAndWriteNode,
+                        Prism::GlobalVariableOrWriteNode, Prism::GlobalVariableAndWriteNode,
+                        Prism::LocalVariableOrWriteNode, Prism::LocalVariableAndWriteNode,
+                        Prism::InstanceVariableOrWriteNode, Prism::InstanceVariableAndWriteNode,
+                        Prism::ConstantOrWriteNode, Prism::ConstantAndWriteNode
+                     [node.value].compact
+                   when Prism::ClassVariableOperatorWriteNode, Prism::GlobalVariableOperatorWriteNode,
+                        Prism::LocalVariableOperatorWriteNode, Prism::InstanceVariableOperatorWriteNode,
+                        Prism::ConstantOperatorWriteNode
+                     [node.value].compact
+                   when Prism::ConstantPathOrWriteNode, Prism::ConstantPathAndWriteNode,
+                        Prism::ConstantPathOperatorWriteNode
+                     [node.target, node.value].compact
+                   when Prism::ConstantPathWriteNode
+                     [node.target, node.value].compact
+                   when Prism::CaseMatchNode
+                     [node.predicate, *node.conditions, node.else_clause].compact
+                   when Prism::InNode
+                     [node.pattern, node.statements].compact
+                   when Prism::MatchPredicateNode, Prism::MatchRequiredNode
+                     [node.value, node.pattern].compact
+                   when Prism::ParenthesesNode
+                     [node.body].compact
+                   when Prism::DefinedNode
+                     [node.value].compact
+                   when Prism::SingletonClassNode
+                     [node.expression, node.body].compact
+                   when Prism::AliasMethodNode
+                     [node.new_name, node.old_name].compact
+                   when Prism::AliasGlobalVariableNode
+                     [node.new_name, node.old_name].compact
+                   when Prism::UndefNode
+                     node.names || []
+                   when Prism::AssocSplatNode
+                     [node.value].compact
+                   when Prism::BlockArgumentNode
+                     [node.expression].compact
+                   when Prism::MultiWriteNode
+                     [*node.lefts, node.rest, *node.rights, node.value].compact
+                   when Prism::MultiTargetNode
+                     [*node.lefts, node.rest, *node.rights].compact
                    else
                      # For unknown types, try to get child nodes if they exist
                      []

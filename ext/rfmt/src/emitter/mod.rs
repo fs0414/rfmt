@@ -79,24 +79,37 @@ impl Emitter {
     /// Emit all comments that haven't been emitted yet
     fn emit_remaining_comments(&mut self, last_code_line: usize) -> Result<()> {
         let mut last_end_line: Option<usize> = Some(last_code_line);
+        let mut is_first_comment = true;
+
         for (idx, comment) in self.all_comments.iter().enumerate() {
             if self.emitted_comment_indices.contains(&idx) {
                 continue;
             }
-            // Ensure we start on a new line for remaining comments
-            if !self.buffer.ends_with('\n') {
+
+            // For the first remaining comment:
+            // - If buffer is empty, don't add any leading newline
+            // - If buffer has content, ensure we start on a new line
+            if is_first_comment && self.buffer.is_empty() {
+                // Don't add leading newline for first comment when buffer is empty
+            } else if !self.buffer.ends_with('\n') {
                 self.buffer.push('\n');
             }
+
             // Preserve blank lines between code/comments
-            if let Some(prev_line) = last_end_line {
-                let gap = comment.location.start_line.saturating_sub(prev_line);
-                for _ in 1..gap {
-                    self.buffer.push('\n');
+            // But only if this is not the first comment in an empty buffer
+            if !(is_first_comment && self.buffer.is_empty()) {
+                if let Some(prev_line) = last_end_line {
+                    let gap = comment.location.start_line.saturating_sub(prev_line);
+                    for _ in 1..gap {
+                        self.buffer.push('\n');
+                    }
                 }
             }
+
             writeln!(self.buffer, "{}", comment.text)?;
             self.emitted_comment_indices.push(idx);
             last_end_line = Some(comment.location.end_line);
+            is_first_comment = false;
         }
         Ok(())
     }

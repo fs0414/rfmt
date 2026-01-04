@@ -6,6 +6,7 @@
 - Fix trailing comments on `end` keyword (e.g., `end # rubocop:disable`)
 - Fix block internal comments being moved outside the block
 - Fix blank line preservation between code and comments inside blocks
+- Fix leading blank line being added to comment-only files
 
 ## [1.2.4] - 2026-01-04
 

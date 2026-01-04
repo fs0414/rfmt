@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
-require 'openssl'
 require 'json'
 require 'fileutils'
 
 module Rfmt
   # Cache system for formatted files
-  # Uses SHA256 hash of file content to determine if formatting is needed
+  # Uses mtime (modification time) to determine if formatting is needed
   class Cache
     class CacheError < StandardError; end
 
@@ -23,22 +22,22 @@ module Rfmt
     end
 
     # Check if file needs formatting
-    # Returns true if file content has changed or not in cache
+    # Returns true if file mtime has changed or not in cache
     def needs_formatting?(file_path)
       return true unless File.exist?(file_path)
 
-      current_hash = file_hash(file_path)
-      cached_hash = @cache_data.dig(file_path, 'hash')
+      current_mtime = File.mtime(file_path).to_i
+      cached_mtime = @cache_data.dig(file_path, 'mtime')
 
-      current_hash != cached_hash
+      current_mtime != cached_mtime
     end
 
-    # Mark file as formatted with current content
+    # Mark file as formatted with current mtime
     def mark_formatted(file_path)
       return unless File.exist?(file_path)
 
       @cache_data[file_path] = {
-        'hash' => file_hash(file_path),
+        'mtime' => File.mtime(file_path).to_i,
         'formatted_at' => Time.now.to_i,
         'version' => CACHE_VERSION
       }
@@ -101,13 +100,6 @@ module Rfmt
     rescue StandardError => e
       warn "Warning: Failed to load cache, starting with empty cache: #{e.message}"
       @cache_data = {}
-    end
-
-    def file_hash(file_path)
-      content = File.read(file_path)
-      OpenSSL::Digest::SHA256.hexdigest(content)
-    rescue StandardError => e
-      raise CacheError, "Failed to read file #{file_path}: #{e.message}"
     end
 
     def cache_size

@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [1.2.7] - 2026-01-04
+
+### Changed
+- Remove OpenSSL dependency: Use mtime instead of SHA256 hash for cache invalidation
+
 ## [1.2.6] - 2026-01-04
 
 ### Changed

@@ -1,0 +1,75 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for rfmt
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please fill out the form below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: |
+        Is your feature request related to a problem?
+        A clear description of what the problem is.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: A clear description of what you want to happen.
+      placeholder: "I would like rfmt to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered.
+      placeholder: "I also considered..."
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Code Examples
+      description: |
+        If applicable, provide before/after code examples.
+        This will be automatically formatted as Ruby code.
+      render: ruby
+      placeholder: |
+        # Before (current behavior)
+        def foo(a,b,c)
+        end
+
+        # After (desired behavior)
+        def foo(a, b, c)
+        end
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Would help my workflow
+        - Blocking my adoption of rfmt
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be interested in contributing this feature?
+      options:
+        - label: I'm willing to submit a PR for this feature
+        - label: I can help with testing
+        - label: I can help with documentation

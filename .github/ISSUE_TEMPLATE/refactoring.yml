@@ -1,0 +1,139 @@
+name: Refactoring Proposal
+description: Propose a code refactoring for improved testability, maintainability, or type safety
+title: "[Refactor]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a refactoring! This template is for internal code improvements that don't change external behavior.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Refactoring Category
+      description: What aspect of the code does this improve?
+      options:
+        - Testability (make code easier to test)
+        - Maintainability (improve code organization)
+        - Type Safety (leverage Rust/Ruby type systems)
+        - Performance (optimize without changing behavior)
+        - Code Quality (reduce complexity, improve readability)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Affected Layer
+      description: Which part of the codebase is affected?
+      options:
+        - Rust - Emitter (ext/rfmt/src/emitter/)
+        - Rust - AST (ext/rfmt/src/ast/)
+        - Rust - Config (ext/rfmt/src/config/)
+        - Rust - Parser (ext/rfmt/src/parser/)
+        - Rust - Error Handling (ext/rfmt/src/error/)
+        - Ruby - PrismBridge (lib/rfmt/)
+        - Ruby - CLI (exe/)
+        - Multiple layers
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current State
+      description: |
+        Describe the current implementation and its problems.
+        Include file paths and line numbers if possible.
+      placeholder: |
+        **File:** `ext/rfmt/src/emitter/mod.rs:85`
+
+        **Current code:**
+        ```rust
+        if self.emitted_comment_indices.contains(&idx) {
+            continue;
+        }
+        ```
+
+        **Problem:** Linear search O(n) on every comment check
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed Change
+      description: |
+        Describe the refactoring with code examples.
+      placeholder: |
+        **Proposed code:**
+        ```rust
+        // Use HashSet for O(1) lookup
+        emitted_comment_indices: HashSet<usize>,
+        ```
+
+        **Benefits:**
+        - O(1) lookup instead of O(n)
+        - Better performance for files with many comments
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-to-modify
+    attributes:
+      label: Files to Modify
+      description: List all files that need to be changed.
+      placeholder: |
+        - `ext/rfmt/src/emitter/mod.rs`
+          - Line 1: Add import
+          - Line 19: Change type
+          - Lines 29, 41: Update constructors
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking-change
+    attributes:
+      label: Breaking Change?
+      description: Does this change break any public API?
+      options:
+        - "No - internal refactoring only"
+        - "Yes - but backward compatible"
+        - "Yes - breaking change required"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated Effort
+      options:
+        - Small (< 1 hour)
+        - Medium (1-4 hours)
+        - Large (4-8 hours)
+        - Very Large (> 8 hours)
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know when this refactoring is complete?
+      placeholder: |
+        - [ ] All existing tests pass
+        - [ ] New unit tests added for the refactored code
+        - [ ] `cargo clippy` reports no new warnings
+        - [ ] Performance benchmark shows improvement (if applicable)
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks & Mitigations
+      description: Any risks associated with this change and how to mitigate them.
+      placeholder: |
+        **Risk:** Might introduce subtle behavior changes
+        **Mitigation:** Add property-based tests to verify idempotency

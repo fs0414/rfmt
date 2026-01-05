@@ -1,0 +1,112 @@
+name: Node Type Support
+description: Request support for a Ruby/Prism node type
+title: "[Node]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request support for a Prism node type that rfmt doesn't currently handle correctly.
+
+  - type: input
+    id: node-type
+    attributes:
+      label: Node Type
+      description: The Prism node type name (e.g., CaseMatchNode, MatchPredicateNode)
+      placeholder: "CaseMatchNode"
+    validations:
+      required: true
+
+  - type: textarea
+    id: ruby-syntax
+    attributes:
+      label: Ruby Syntax
+      description: |
+        The Ruby syntax that uses this node type.
+        This will be automatically formatted as Ruby code.
+      render: ruby
+      placeholder: |
+        case value
+        in [1, 2, 3]
+          puts "array"
+        in { key: value }
+          puts "hash"
+        end
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-output
+    attributes:
+      label: Current Output
+      description: What does rfmt currently output for this syntax?
+      render: ruby
+      placeholder: |
+        # Current (broken) output:
+        case value
+        in [1, 2, 3]puts "array"
+        end
+
+  - type: textarea
+    id: expected-output
+    attributes:
+      label: Expected Output
+      description: What should rfmt output?
+      render: ruby
+      placeholder: |
+        # Expected output:
+        case value
+        in [1, 2, 3]
+          puts "array"
+        in { key: value }
+          puts "hash"
+        end
+    validations:
+      required: true
+
+  - type: dropdown
+    id: usage-context
+    attributes:
+      label: Usage Context
+      description: Where is this syntax commonly used?
+      options:
+        - Rails applications
+        - General Ruby applications
+        - Ruby 3.x pattern matching
+        - DSL / metaprogramming
+        - Testing frameworks (RSpec, etc.)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How commonly is this syntax used?
+      options:
+        - Low (rare edge case)
+        - Medium (occasionally used)
+        - High (commonly used in production code)
+        - Critical (blocking adoption)
+    validations:
+      required: true
+
+  - type: textarea
+    id: prism-ast
+    attributes:
+      label: Prism AST (optional)
+      description: |
+        If you have the Prism AST output, include it here.
+        Run: `ruby -rprism -e "pp Prism.parse('your code').value"`
+      render: ruby
+      placeholder: |
+        # Output of Prism.parse(...).value
+        @ ProgramNode (location: ...)
+        └── ...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information (related issues, workarounds, etc.)

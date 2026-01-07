@@ -241,8 +241,6 @@ module Rfmt
                      [node.expression].compact
                    when Prism::AndNode
                      [node.left, node.right].compact
-                   when Prism::NotNode
-                     [node.expression].compact
                    when Prism::InterpolatedRegularExpressionNode, Prism::InterpolatedSymbolNode,
                         Prism::InterpolatedXStringNode
                      node.parts || []

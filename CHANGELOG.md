@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [1.3.1] - 2026-01-08
+
+### Added
+- Dedicated emitters for SingletonClassNode and pattern matching (CaseMatchNode, InNode)
+- Literal and pattern match node support
+- NoKeywordsParameterNode support
+
+### Changed
+- Performance: Comment lookup optimized with BTreeMap index (O(n) → O(log n))
+- Performance: HashSet for comment tracking (O(n) → O(1) contains check)
+- Performance: Cached indent strings to avoid repeated allocations
+
+### Fixed
+- DefNode parameter handling and missing node types
+- Deep nest JSON parse error (max_nesting: false)
+
 ## [1.3.0] - 2026-01-07
 
 ### Added

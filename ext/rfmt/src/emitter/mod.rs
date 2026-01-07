@@ -1440,10 +1440,7 @@ impl Emitter {
         // Find predicate (first child that isn't InNode or ElseNode)
         let mut in_start_idx = 0;
         if let Some(first_child) = node.children.first() {
-            if !matches!(
-                first_child.node_type,
-                NodeType::InNode | NodeType::ElseNode
-            ) {
+            if !matches!(first_child.node_type, NodeType::InNode | NodeType::ElseNode) {
                 // This is the predicate - extract from source
                 let start = first_child.location.start_offset;
                 let end = first_child.location.end_offset;

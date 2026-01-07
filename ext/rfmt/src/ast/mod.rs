@@ -180,6 +180,15 @@ pub enum NodeType {
     KeywordRestParameterNode,
     BlockParameterNode,
 
+    // Source metadata nodes
+    SourceFileNode,
+    SourceLineNode,
+    SourceEncodingNode,
+
+    // Pre/Post execution
+    PreExecutionNode,
+    PostExecutionNode,
+
     Unknown(String),
 }
 
@@ -290,6 +299,11 @@ impl NodeType {
             "block_argument_node" => Self::BlockArgumentNode,
             "multi_write_node" => Self::MultiWriteNode,
             "multi_target_node" => Self::MultiTargetNode,
+            "source_file_node" => Self::SourceFileNode,
+            "source_line_node" => Self::SourceLineNode,
+            "source_encoding_node" => Self::SourceEncodingNode,
+            "pre_execution_node" => Self::PreExecutionNode,
+            "post_execution_node" => Self::PostExecutionNode,
             _ => Self::Unknown(s.to_string()),
         }
     }

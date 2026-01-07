@@ -293,6 +293,10 @@ module Rfmt
                      [*node.lefts, node.rest, *node.rights, node.value].compact
                    when Prism::MultiTargetNode
                      [*node.lefts, node.rest, *node.rights].compact
+                   when Prism::SourceFileNode, Prism::SourceLineNode, Prism::SourceEncodingNode
+                     []
+                   when Prism::PreExecutionNode, Prism::PostExecutionNode
+                     [node.statements].compact
                    else
                      # For unknown types, try to get child nodes if they exist
                      []
@@ -327,6 +331,11 @@ module Rfmt
           metadata['name'] = name
         end
         metadata['parameters_count'] = extract_parameter_count(node).to_s
+        # Extract parameters text directly from source
+        if node.parameters
+          metadata['parameters_text'] = node.parameters.location.slice
+          metadata['has_parens'] = (!node.lparen_loc.nil?).to_s
+        end
         # Check if this is a class method (def self.method_name)
         if node.respond_to?(:receiver) && node.receiver
           receiver = node.receiver

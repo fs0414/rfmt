@@ -508,31 +508,17 @@ impl Emitter {
             write!(self.buffer, "{}", name)?;
         }
 
-        // TODO: Handle parameters properly
-        // For now, extract from source if method has parameters
-        if node
-            .metadata
-            .get("parameters_count")
-            .and_then(|s| s.parse::<usize>().ok())
-            .unwrap_or(0)
-            > 0
-        {
-            // Extract parameter part from source
-            if !self.source.is_empty() && node.location.end_offset <= self.source.len() {
-                if let Some(source_text) = self
-                    .source
-                    .get(node.location.start_offset..node.location.end_offset)
-                {
-                    // Find parameters in source (between def name and \n or ;)
-                    if let Some(def_line) = source_text.lines().next() {
-                        if let Some(params_start) = def_line.find('(') {
-                            if let Some(params_end) = def_line.find(')') {
-                                let params = &def_line[params_start..=params_end];
-                                write!(self.buffer, "{}", params)?;
-                            }
-                        }
-                    }
-                }
+        // Emit parameters using metadata from prism_bridge
+        if let Some(params_text) = node.metadata.get("parameters_text") {
+            let has_parens = node
+                .metadata
+                .get("has_parens")
+                .map(|v| v == "true")
+                .unwrap_or(false);
+            if has_parens {
+                write!(self.buffer, "({})", params_text)?;
+            } else {
+                write!(self.buffer, " {}", params_text)?;
             }
         }
 

@@ -56,7 +56,7 @@ module Rfmt
 
     # Serialize the Prism AST to JSON
     def self.serialize_ast(node)
-      JSON.generate(convert_node(node))
+      JSON.generate(convert_node(node), max_nesting: false)
     end
 
     # Serialize the Prism AST with comments to JSON
@@ -80,7 +80,7 @@ module Rfmt
       JSON.generate({
                       ast: convert_node(result.value),
                       comments: comments
-                    })
+                    }, max_nesting: false)
     end
 
     # Convert a Prism node to our internal representation
@@ -241,8 +241,6 @@ module Rfmt
                      [node.expression].compact
                    when Prism::AndNode
                      [node.left, node.right].compact
-                   when Prism::NotNode
-                     [node.expression].compact
                    when Prism::InterpolatedRegularExpressionNode, Prism::InterpolatedSymbolNode,
                         Prism::InterpolatedXStringNode
                      node.parts || []
@@ -293,6 +291,55 @@ module Rfmt
                      [*node.lefts, node.rest, *node.rights, node.value].compact
                    when Prism::MultiTargetNode
                      [*node.lefts, node.rest, *node.rights].compact
+                   when Prism::SourceFileNode, Prism::SourceLineNode, Prism::SourceEncodingNode
+                     []
+                   when Prism::PreExecutionNode, Prism::PostExecutionNode
+                     [node.statements].compact
+                   # Numeric literals
+                   when Prism::RationalNode, Prism::ImaginaryNode
+                     [node.numeric].compact
+                   # String interpolation
+                   when Prism::EmbeddedVariableNode
+                     [node.variable].compact
+                   # Pattern matching patterns
+                   when Prism::ArrayPatternNode
+                     [*node.requireds, node.rest, *node.posts].compact
+                   when Prism::HashPatternNode
+                     [*node.elements, node.rest].compact
+                   when Prism::FindPatternNode
+                     [node.left, *node.requireds, node.right].compact
+                   when Prism::CapturePatternNode
+                     [node.value, node.target].compact
+                   when Prism::AlternationPatternNode
+                     [node.left, node.right].compact
+                   when Prism::PinnedExpressionNode
+                     [node.expression].compact
+                   when Prism::PinnedVariableNode
+                     [node.variable].compact
+                   # Forwarding and special parameters
+                   when Prism::ForwardingArgumentsNode, Prism::ForwardingParameterNode,
+                        Prism::NoKeywordsParameterNode
+                     []
+                   # References
+                   when Prism::BackReferenceReadNode, Prism::NumberedReferenceReadNode
+                     []
+                   # Call/Index compound assignment
+                   when Prism::CallAndWriteNode, Prism::CallOrWriteNode, Prism::CallOperatorWriteNode
+                     [node.receiver, node.value].compact
+                   when Prism::IndexAndWriteNode, Prism::IndexOrWriteNode, Prism::IndexOperatorWriteNode
+                     [node.receiver, node.arguments, node.value].compact
+                   # Match
+                   when Prism::MatchWriteNode
+                     [node.call, *node.targets].compact
+                   when Prism::MatchLastLineNode, Prism::InterpolatedMatchLastLineNode
+                     []
+                   # Other
+                   when Prism::FlipFlopNode
+                     [node.left, node.right].compact
+                   when Prism::ImplicitNode
+                     [node.value].compact
+                   when Prism::ImplicitRestNode
+                     []
                    else
                      # For unknown types, try to get child nodes if they exist
                      []
@@ -327,6 +374,11 @@ module Rfmt
           metadata['name'] = name
         end
         metadata['parameters_count'] = extract_parameter_count(node).to_s
+        # Extract parameters text directly from source
+        if node.parameters
+          metadata['parameters_text'] = node.parameters.location.slice
+          metadata['has_parens'] = (!node.lparen_loc.nil?).to_s
+        end
         # Check if this is a class method (def self.method_name)
         if node.respond_to?(:receiver) && node.receiver
           receiver = node.receiver

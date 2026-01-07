@@ -326,6 +326,9 @@ impl Emitter {
             NodeType::WhileNode => self.emit_while_until(node, indent_level, "while")?,
             NodeType::UntilNode => self.emit_while_until(node, indent_level, "until")?,
             NodeType::ForNode => self.emit_for(node, indent_level)?,
+            NodeType::SingletonClassNode => self.emit_singleton_class(node, indent_level)?,
+            NodeType::CaseMatchNode => self.emit_case_match(node, indent_level)?,
+            NodeType::InNode => self.emit_in(node, indent_level)?,
             _ => self.emit_generic(node, indent_level)?,
         }
         Ok(())
@@ -508,31 +511,17 @@ impl Emitter {
             write!(self.buffer, "{}", name)?;
         }
 
-        // TODO: Handle parameters properly
-        // For now, extract from source if method has parameters
-        if node
-            .metadata
-            .get("parameters_count")
-            .and_then(|s| s.parse::<usize>().ok())
-            .unwrap_or(0)
-            > 0
-        {
-            // Extract parameter part from source
-            if !self.source.is_empty() && node.location.end_offset <= self.source.len() {
-                if let Some(source_text) = self
-                    .source
-                    .get(node.location.start_offset..node.location.end_offset)
-                {
-                    // Find parameters in source (between def name and \n or ;)
-                    if let Some(def_line) = source_text.lines().next() {
-                        if let Some(params_start) = def_line.find('(') {
-                            if let Some(params_end) = def_line.find(')') {
-                                let params = &def_line[params_start..=params_end];
-                                write!(self.buffer, "{}", params)?;
-                            }
-                        }
-                    }
-                }
+        // Emit parameters using metadata from prism_bridge
+        if let Some(params_text) = node.metadata.get("parameters_text") {
+            let has_parens = node
+                .metadata
+                .get("has_parens")
+                .map(|v| v == "true")
+                .unwrap_or(false);
+            if has_parens {
+                write!(self.buffer, "({})", params_text)?;
+            } else {
+                write!(self.buffer, " {}", params_text)?;
             }
         }
 
@@ -1382,6 +1371,148 @@ impl Emitter {
         Ok(())
     }
 
+    /// Emit singleton class definition (class << self / class << object)
+    fn emit_singleton_class(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+        self.emit_indent(indent_level)?;
+
+        write!(self.buffer, "class << ")?;
+
+        // First child is the expression (self or an object)
+        if let Some(expression) = node.children.first() {
+            if !self.source.is_empty() {
+                let start = expression.location.start_offset;
+                let end = expression.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, "{}", text)?;
+                }
+            }
+        }
+
+        // Emit trailing comments on the class << line
+        self.emit_trailing_comments(node.location.start_line)?;
+        self.buffer.push('\n');
+
+        let class_start_line = node.location.start_line;
+        let class_end_line = node.location.end_line;
+        let mut has_body_content = false;
+
+        // Emit body (skip the first child which is the expression)
+        for (i, child) in node.children.iter().enumerate() {
+            if i == 0 {
+                // Skip the expression (self or object)
+                continue;
+            }
+            if matches!(child.node_type, NodeType::StatementsNode) {
+                has_body_content = true;
+                self.emit_statements(child, indent_level + 1)?;
+            } else if !self.is_structural_node(&child.node_type) {
+                has_body_content = true;
+                self.emit_node(child, indent_level + 1)?;
+            }
+        }
+
+        // Emit comments inside the singleton class body
+        self.emit_comments_in_range(class_start_line + 1, class_end_line, indent_level + 1)?;
+
+        // Add newline before end if there was body content
+        if (has_body_content || self.has_comments_in_range(class_start_line + 1, class_end_line))
+            && !self.buffer.ends_with('\n')
+        {
+            self.buffer.push('\n');
+        }
+
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "end")?;
+        self.emit_trailing_comments(node.location.end_line)?;
+
+        Ok(())
+    }
+
+    /// Emit case match (Ruby 3.0+ pattern matching with case...in)
+    fn emit_case_match(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+        self.emit_indent(indent_level)?;
+
+        // Write "case" keyword
+        write!(self.buffer, "case")?;
+
+        // Find predicate (first child that isn't InNode or ElseNode)
+        let mut in_start_idx = 0;
+        if let Some(first_child) = node.children.first() {
+            if !matches!(first_child.node_type, NodeType::InNode | NodeType::ElseNode) {
+                // This is the predicate - extract from source
+                let start = first_child.location.start_offset;
+                let end = first_child.location.end_offset;
+                if let Some(text) = self.source.get(start..end) {
+                    write!(self.buffer, " {}", text)?;
+                }
+                in_start_idx = 1;
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Emit in clauses and else
+        for child in node.children.iter().skip(in_start_idx) {
+            match &child.node_type {
+                NodeType::InNode => {
+                    self.emit_in(child, indent_level)?;
+                    self.buffer.push('\n');
+                }
+                NodeType::ElseNode => {
+                    self.emit_indent(indent_level)?;
+                    writeln!(self.buffer, "else")?;
+                    // Emit else body
+                    for else_child in &child.children {
+                        if matches!(else_child.node_type, NodeType::StatementsNode) {
+                            self.emit_statements(else_child, indent_level + 1)?;
+                        } else {
+                            self.emit_node(else_child, indent_level + 1)?;
+                        }
+                    }
+                    self.buffer.push('\n');
+                }
+                _ => {}
+            }
+        }
+
+        // Emit "end" keyword
+        self.emit_indent(indent_level)?;
+        write!(self.buffer, "end")?;
+        self.emit_trailing_comments(node.location.end_line)?;
+
+        Ok(())
+    }
+
+    /// Emit in node (pattern matching clause)
+    fn emit_in(&mut self, node: &Node, indent_level: usize) -> Result<()> {
+        self.emit_comments_before(node.location.start_line, indent_level)?;
+        self.emit_indent(indent_level)?;
+
+        write!(self.buffer, "in ")?;
+
+        // First child is the pattern
+        if let Some(pattern) = node.children.first() {
+            let start = pattern.location.start_offset;
+            let end = pattern.location.end_offset;
+            if let Some(text) = self.source.get(start..end) {
+                write!(self.buffer, "{}", text)?;
+            }
+        }
+
+        self.buffer.push('\n');
+
+        // Second child is the statements body
+        if let Some(statements) = node.children.get(1) {
+            if matches!(statements.node_type, NodeType::StatementsNode) {
+                self.emit_statements(statements, indent_level + 1)?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Check if node is structural (part of definition syntax, not body)
     /// These nodes are part of class/module/method definitions and should not be emitted as body
     fn is_structural_node(&self, node_type: &NodeType) -> bool {
@@ -1398,6 +1529,8 @@ impl Emitter {
                 | NodeType::OptionalKeywordParameterNode
                 | NodeType::KeywordRestParameterNode
                 | NodeType::BlockParameterNode
+                | NodeType::ForwardingParameterNode
+                | NodeType::NoKeywordsParameterNode
         )
     }
 }

@@ -75,6 +75,45 @@ RSpec.describe Rfmt do
       expect(result).not_to match(/timeout:\s+30\s+retries:/)
       expect(result).to include('@timeout = timeout')
     end
+
+    it 'formats method with parameters without parentheses' do
+      source = <<~RUBY
+        def foo bar, baz
+          puts bar
+        end
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('def foo bar, baz')
+      expect(result).to include('puts bar')
+    end
+
+    it 'formats source metadata nodes' do
+      source = <<~RUBY
+        puts __FILE__
+        puts __LINE__
+        puts __ENCODING__
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('__FILE__')
+      expect(result).to include('__LINE__')
+      expect(result).to include('__ENCODING__')
+    end
+
+    it 'formats BEGIN and END blocks' do
+      source = <<~RUBY
+        BEGIN { setup }
+        END { teardown }
+      RUBY
+
+      result = Rfmt.format(source)
+
+      expect(result).to include('BEGIN { setup }')
+      expect(result).to include('END { teardown }')
+    end
   end
 
   describe '.version_info' do

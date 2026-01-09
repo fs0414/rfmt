@@ -427,15 +427,12 @@ impl Emitter {
                 let next_start_line = next_child.location.start_line;
 
                 // Find the first comment between current and next node (if any)
+                // Uses BTreeMap range for O(log n) lookup instead of O(n) iteration
                 let first_comment_line = self
-                    .all_comments
-                    .iter()
-                    .filter(|c| {
-                        c.location.start_line > current_end_line
-                            && c.location.end_line < next_start_line
-                    })
-                    .map(|c| c.location.start_line)
-                    .min();
+                    .comments_by_line
+                    .range((current_end_line + 1)..next_start_line)
+                    .next()
+                    .map(|(line, _)| *line);
 
                 // Calculate line diff based on whether there's a comment
                 let effective_next_line = first_comment_line.unwrap_or(next_start_line);

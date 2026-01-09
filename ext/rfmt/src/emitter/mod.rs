@@ -79,12 +79,13 @@ impl Emitter {
     /// Find the last line of code in the AST (excluding comments)
     fn find_last_code_line(ast: &Node) -> usize {
         let mut max_line = ast.location.end_line;
-        for child in &ast.children {
-            let child_end = Self::find_last_code_line(child);
-            if child_end > max_line {
-                max_line = child_end;
-            }
+        let mut stack = vec![ast];
+
+        while let Some(node) = stack.pop() {
+            max_line = max_line.max(node.location.end_line);
+            stack.extend(node.children.iter());
         }
+
         max_line
     }
 

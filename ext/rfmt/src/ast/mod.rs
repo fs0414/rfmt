@@ -235,9 +235,11 @@ pub enum NodeType {
     Unknown(String),
 }
 
-impl NodeType {
-    pub fn from_str(s: &str) -> Self {
-        match s {
+impl std::str::FromStr for NodeType {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
             "program_node" => Self::ProgramNode,
             "statements_node" => Self::StatementsNode,
             "class_node" => Self::ClassNode,
@@ -383,7 +385,14 @@ impl NodeType {
             "implicit_node" => Self::ImplicitNode,
             "implicit_rest_node" => Self::ImplicitRestNode,
             _ => Self::Unknown(s.to_string()),
-        }
+        })
+    }
+}
+
+impl NodeType {
+    /// Parse a node type from a string (convenience wrapper for `FromStr`)
+    pub fn from_str(s: &str) -> Self {
+        s.parse().unwrap()
     }
 
     /// Check if this node type is a definition (class, module, or method)

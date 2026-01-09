@@ -1,5 +1,19 @@
 ## [Unreleased]
 
+## [1.3.2] - 2026-01-09
+
+### Added
+- Implement `std::str::FromStr` trait for `NodeType`
+- Unit tests for validation module
+
+### Changed
+- Use serde enum for comment type deserialization (type-safe JSON parsing)
+- Convert recursive `find_last_code_line` to iterative approach (prevent stack overflow)
+- Use BTreeMap index for comment lookup in `emit_statements` (O(n) → O(log n))
+
+### Fixed
+- Remove panic-prone `unwrap()` on Mutex lock in logger (prevent Ruby VM crash)
+
 ## [1.3.1] - 2026-01-08
 
 ### Added

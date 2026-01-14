@@ -186,32 +186,28 @@ impl Emitter {
     /// Emit comments that appear before a given line
     /// Uses BTreeMap index for O(log n) lookup instead of O(n) iteration
     fn emit_comments_before(&mut self, line: usize, indent_level: usize) -> Result<()> {
-        let indent_str = self.get_indent(indent_level).to_string();
+        // Ensure indent cache is ready before we start borrowing
+        self.ensure_indent_cache(indent_level);
 
         // Use indexed lookup instead of iterating all comments
         let indices = self.get_comment_indices_before(line);
 
-        // Build list of comments to emit with their data
+        // Build list of comments to emit with index and location only (no text clone)
         let mut comments_to_emit: Vec<_> = indices
             .into_iter()
             .map(|idx| {
                 let comment = &self.all_comments[idx];
-                (
-                    idx,
-                    comment.text.clone(),
-                    comment.location.start_line,
-                    comment.location.end_line,
-                )
+                (idx, comment.location.start_line, comment.location.end_line)
             })
             .collect();
 
         // Sort by start_line to emit in order
-        comments_to_emit.sort_by_key(|(_, _, start, _)| *start);
+        comments_to_emit.sort_by_key(|(_, start, _)| *start);
 
         let comments_count = comments_to_emit.len();
         let mut last_comment_end_line: Option<usize> = None;
 
-        for (i, (idx, text, comment_start_line, comment_end_line)) in
+        for (i, (idx, comment_start_line, comment_end_line)) in
             comments_to_emit.into_iter().enumerate()
         {
             // Preserve blank lines between comments
@@ -222,7 +218,12 @@ impl Emitter {
                 }
             }
 
-            writeln!(self.buffer, "{}{}", indent_str, text)?;
+            // Access text by reference at write time (no clone needed)
+            writeln!(
+                self.buffer,
+                "{}{}",
+                &self.indent_cache[indent_level], &self.all_comments[idx].text
+            )?;
             self.emitted_comment_indices.insert(idx);
             last_comment_end_line = Some(comment_end_line);
 
@@ -255,32 +256,28 @@ impl Emitter {
         end_line: usize,
         indent_level: usize,
     ) -> Result<()> {
-        let indent_str = self.get_indent(indent_level).to_string();
+        // Ensure indent cache is ready before we start borrowing
+        self.ensure_indent_cache(indent_level);
 
         // Use indexed lookup instead of iterating all comments
         let indices = self.get_comment_indices_in_range(start_line, end_line);
 
-        // Build list of comments to emit, filtering by end_line
+        // Build list of comments to emit with index and location only (no text clone)
         let mut comments_to_emit: Vec<_> = indices
             .into_iter()
             .filter(|&idx| self.all_comments[idx].location.end_line < end_line)
             .map(|idx| {
                 let comment = &self.all_comments[idx];
-                (
-                    idx,
-                    comment.text.clone(),
-                    comment.location.start_line,
-                    comment.location.end_line,
-                )
+                (idx, comment.location.start_line, comment.location.end_line)
             })
             .collect();
 
         // Sort by start_line to emit in order
-        comments_to_emit.sort_by_key(|(_, _, start, _)| *start);
+        comments_to_emit.sort_by_key(|(_, start, _)| *start);
 
         let mut last_comment_end_line: Option<usize> = None;
 
-        for (idx, text, comment_start_line, comment_end_line) in comments_to_emit {
+        for (idx, comment_start_line, comment_end_line) in comments_to_emit {
             // Preserve blank lines between comments
             if let Some(prev_end) = last_comment_end_line {
                 let gap = comment_start_line.saturating_sub(prev_end);
@@ -289,7 +286,12 @@ impl Emitter {
                 }
             }
 
-            writeln!(self.buffer, "{}{}", indent_str, text)?;
+            // Access text by reference at write time (no clone needed)
+            writeln!(
+                self.buffer,
+                "{}{}",
+                &self.indent_cache[indent_level], &self.all_comments[idx].text
+            )?;
             self.emitted_comment_indices.insert(idx);
             last_comment_end_line = Some(comment_end_line);
         }
@@ -306,39 +308,40 @@ impl Emitter {
         indent_level: usize,
         prev_line: usize,
     ) -> Result<()> {
-        let indent_str = self.get_indent(indent_level).to_string();
+        // Ensure indent cache is ready before we start borrowing
+        self.ensure_indent_cache(indent_level);
 
         // Use indexed lookup instead of iterating all comments
         let indices = self.get_comment_indices_in_range(start_line, end_line);
 
-        // Build list of comments to emit, filtering by end_line
+        // Build list of comments to emit with index and location only (no text clone)
         let mut comments_to_emit: Vec<_> = indices
             .into_iter()
             .filter(|&idx| self.all_comments[idx].location.end_line < end_line)
             .map(|idx| {
                 let comment = &self.all_comments[idx];
-                (
-                    idx,
-                    comment.text.clone(),
-                    comment.location.start_line,
-                    comment.location.end_line,
-                )
+                (idx, comment.location.start_line, comment.location.end_line)
             })
             .collect();
 
         // Sort by start_line to emit in order
-        comments_to_emit.sort_by_key(|(_, _, start, _)| *start);
+        comments_to_emit.sort_by_key(|(_, start, _)| *start);
 
         let mut last_end_line: usize = prev_line;
 
-        for (idx, text, comment_start_line, comment_end_line) in comments_to_emit {
+        for (idx, comment_start_line, comment_end_line) in comments_to_emit {
             // Preserve blank lines between previous content and this comment
             let gap = comment_start_line.saturating_sub(last_end_line);
             for _ in 1..gap {
                 self.buffer.push('\n');
             }
 
-            writeln!(self.buffer, "{}{}", indent_str, text)?;
+            // Access text by reference at write time (no clone needed)
+            writeln!(
+                self.buffer,
+                "{}{}",
+                &self.indent_cache[indent_level], &self.all_comments[idx].text
+            )?;
             self.emitted_comment_indices.insert(idx);
             last_end_line = comment_end_line;
         }
@@ -352,15 +355,12 @@ impl Emitter {
         // Use indexed lookup for O(log n) access
         let indices = self.get_comment_indices_on_line(line);
 
-        // Build list of comments to emit
-        let indices_to_emit: Vec<_> = indices
-            .into_iter()
-            .map(|idx| (idx, self.all_comments[idx].text.clone()))
-            .collect();
+        // Collect indices only (no text clone needed)
+        let indices_to_emit: Vec<usize> = indices;
 
-        // Now emit the collected comments
-        for (idx, text) in indices_to_emit {
-            write!(self.buffer, " {}", text)?;
+        // Now emit the collected comments by accessing text at write time
+        for idx in indices_to_emit {
+            write!(self.buffer, " {}", &self.all_comments[idx].text)?;
             self.emitted_comment_indices.insert(idx);
         }
 
@@ -1311,9 +1311,9 @@ impl Emitter {
         Ok(())
     }
 
-    /// Get cached indent string for a given level
-    fn get_indent(&mut self, level: usize) -> &str {
-        // Extend cache if needed
+    /// Ensure indent cache has entries up to and including the given level
+    /// This allows pre-building the cache before borrowing self.indent_cache
+    fn ensure_indent_cache(&mut self, level: usize) {
         while self.indent_cache.len() <= level {
             let len = self.indent_cache.len();
             let indent = match self.config.formatting.indent_style {
@@ -1322,13 +1322,12 @@ impl Emitter {
             };
             self.indent_cache.push(indent);
         }
-        &self.indent_cache[level]
     }
 
     /// Emit indentation
     fn emit_indent(&mut self, level: usize) -> Result<()> {
-        let indent_str = self.get_indent(level).to_string();
-        write!(self.buffer, "{}", indent_str)?;
+        self.ensure_indent_cache(level);
+        write!(self.buffer, "{}", &self.indent_cache[level])?;
         Ok(())
     }
 

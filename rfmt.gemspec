@@ -37,8 +37,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
   spec.extensions = ['ext/rfmt/extconf.rb']
 
-  spec.add_dependency 'rb_sys', '~> 0.9.120'
-  spec.add_dependency 'thor', '~> 1.3'
   spec.add_dependency 'diff-lcs', '~> 1.5'
   spec.add_dependency 'diffy', '~> 3.4'
+  spec.add_dependency 'rb_sys', '~> 0.9.120'
+  spec.add_dependency 'thor', '~> 1.3'
 end

@@ -46,9 +46,9 @@ class SimpleFormatterBenchmark
     abort "Error: Project not found at #{@rails_path}" unless Dir.exist?(@rails_path)
 
     # Use the current development version of rfmt
-    @rfmt_cmd = File.expand_path('exe/rfmt', __dir__ + '/..')
+    @rfmt_cmd = File.expand_path('exe/rfmt', "#{__dir__}/..")
     @rubocop_cmd = 'bundle exec rubocop'
-    
+
     abort "Error: rfmt not found at #{@rfmt_cmd}" unless File.exist?(@rfmt_cmd)
     abort 'Error: rubocop not available' unless system("#{@rubocop_cmd} --version > /dev/null 2>&1")
 
@@ -56,13 +56,13 @@ class SimpleFormatterBenchmark
     abort 'Error: No Ruby files found' if ruby_files.empty?
 
     puts "Found #{ruby_files.size} Ruby files"
-    
+
     # Check if files need formatting
     needs_formatting = check_files_need_formatting(ruby_files.first(5))
-    puts "Sample files need formatting: #{needs_formatting > 0}"
+    puts "Sample files need formatting: #{needs_formatting.positive?}"
     puts
   end
-  
+
   def check_files_need_formatting(files)
     count = 0
     files.each do |file|

@@ -3,7 +3,7 @@
 require 'thor'
 
 # Check for verbose flag before loading rfmt to set debug mode early
-ENV['RFMT_DEBUG'] = '1' if ARGV.include?('-v') || ARGV.include?('--verbose')
+ENV['RFMT_DEBUG'] = '1' if ARGV.include?('--verbose')
 
 require 'rfmt'
 require 'rfmt/configuration'
@@ -49,9 +49,13 @@ module Rfmt
     PROGRESS_INTERVAL = 10   # Update progress every N files
 
     class_option :config, type: :string, desc: 'Path to configuration file'
-    class_option :verbose, type: :boolean, aliases: '-v', desc: 'Verbose output'
+    class_option :verbose, type: :boolean, desc: 'Verbose output'
 
     default_command :format
+
+    # Map -v and --version to version command
+    map '-v' => 'version'
+    map '--version' => 'version'
 
     desc 'format [FILES]', 'Format Ruby files (default command)'
     option :write, type: :boolean, default: true, desc: 'Write formatted output'

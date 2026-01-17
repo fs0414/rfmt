@@ -94,12 +94,12 @@ module Rfmt
       end
 
       use_parallel = should_use_parallel?(files)
-      
+
       if options[:verbose] && files.size > 1
-        mode = use_parallel ? "parallel (#{options[:jobs] || 'auto'} jobs)" : "sequential"
+        mode = use_parallel ? "parallel (#{options[:jobs] || 'auto'} jobs)" : 'sequential'
         say "Using #{mode} processing for #{files.size} files", :blue
       end
-      
+
       results = if use_parallel
                   format_files_parallel(files)
                 else
@@ -150,29 +150,31 @@ module Rfmt
     # Intelligently decide whether to use parallel processing
     def should_use_parallel?(files)
       return false if files.size <= 1
-      
+
       # Check if parallel option was explicitly set via command line
       # Thor sets options[:parallel] to true/false for --parallel/--no-parallel
       # and nil when not specified
-      if !options[:parallel].nil?
-        return options[:parallel]
-      end
-      
+      return options[:parallel] unless options[:parallel].nil?
+
       # Auto decision based on workload characteristics
       # Calculate total size for better decision
-      total_size = files.sum { |f| File.size(f) rescue 0 }
+      total_size = files.sum do |f|
+        File.size(f)
+      rescue StandardError
+        0
+      end
       avg_size = total_size / files.size.to_f
-      
+
       # Decision matrix:
       # - Less than 20 files: sequential (overhead > benefit)
       # - 20-50 files with small size (<10KB avg): sequential
       # - 20-50 files with large size (>10KB avg): parallel
       # - More than 50 files: always parallel
-      
+
       if files.size < 20
         false
       elsif files.size < 50
-        avg_size > 10_000  # 10KB threshold
+        avg_size > 10_000 # 10KB threshold
       else
         true
       end

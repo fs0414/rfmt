@@ -47,7 +47,7 @@ module Rfmt
     # Constants
     PROGRESS_THRESHOLD = 20  # Show progress for file counts >= this
     PROGRESS_INTERVAL = 10   # Update progress every N files
-    
+
     class_option :config, type: :string, desc: 'Path to configuration file'
     class_option :verbose, type: :boolean, aliases: '-v', desc: 'Verbose output'
 
@@ -75,7 +75,7 @@ module Rfmt
       # Initialize and use cache if enabled
       cache = initialize_cache_if_enabled
       files = filter_files_with_cache(files, cache)
-      
+
       if files.empty?
         say '✓ All files are already formatted (cached)', :cyan
         return
@@ -147,39 +147,40 @@ module Rfmt
 
     def initialize_cache_if_enabled
       return nil unless options[:cache]
-      
+
       cache_opts = options[:cache_dir] ? { cache_dir: options[:cache_dir] } : {}
       Cache.new(**cache_opts)
     end
-    
+
     def filter_files_with_cache(files, cache)
       return files unless cache
-      
+
       original_count = files.size
       filtered = files.select { |file| cache.needs_formatting?(file) }
-      
+
       log_cache_skip(original_count - filtered.size)
       filtered
     end
-    
+
     def log_cache_skip(skipped_count)
       return unless skipped_count.positive? && options[:verbose]
+
       say "ℹ Skipped #{skipped_count} unchanged file(s) (cached)", :cyan
     end
 
     def format_files_sequential(files)
       show_progress = should_show_progress?(files)
-      
+
       files.map.with_index do |file, index|
         display_progress(index, files.size) if show_progress && (index % PROGRESS_INTERVAL).zero?
         format_single_file(file)
       end
     end
-    
+
     def should_show_progress?(files)
       !options[:quiet] && files.size >= PROGRESS_THRESHOLD
     end
-    
+
     def display_progress(index, total)
       percentage = ((index.to_f / total) * 100).round
       say "[#{index}/#{total}] #{percentage}% complete...", :blue
@@ -187,21 +188,22 @@ module Rfmt
 
     def format_files_parallel(files)
       require 'parallel'
-      
+
       process_count = determine_process_count
       log_parallel_processing(files.size, process_count)
-      
+
       Parallel.map(files, in_processes: process_count) do |file|
         format_single_file(file)
       end
     end
-    
+
     def determine_process_count
       options[:jobs] || Parallel.processor_count
     end
-    
+
     def log_parallel_processing(file_count, process_count)
       return unless options[:verbose]
+
       say "Processing #{file_count} files with #{process_count} parallel jobs...", :blue
     end
 
@@ -235,10 +237,10 @@ module Rfmt
       display_summary(stats, results.size)
       exit(1) if should_exit_with_error?(stats)
     end
-    
+
     def process_results(results, cache)
       stats = { changed: 0, errors: 0, failed: 0, duration: 0 }
-      
+
       results.each do |result|
         if result[:error]
           handle_error_result(result, stats)
@@ -248,49 +250,46 @@ module Rfmt
           handle_unchanged_result(result, cache)
         end
       end
-      
+
       stats
     end
-    
+
     def handle_error_result(result, stats)
       say "Error in #{result[:file]}: #{result[:error]}", :red
       stats[:errors] += 1
     end
-    
+
     def handle_changed_result(result, stats, cache)
       stats[:changed] += 1
-      
-      case
-      when options[:check]
+
+      if options[:check]
         say "#{result[:file]} needs formatting", :yellow
         stats[:failed] += 1
         show_diff(result[:file], result[:original], result[:formatted]) if options[:diff]
-      when options[:diff]
+      elsif options[:diff]
         show_diff(result[:file], result[:original], result[:formatted])
-      when options[:write]
+      elsif options[:write]
         write_formatted_file(result, cache)
       else
         puts result[:formatted]
       end
     end
-    
+
     def handle_unchanged_result(result, cache)
-      if options[:verbose] && !options[:check]
-        say "✓ #{result[:file]} already formatted", :white
-      end
+      say "✓ #{result[:file]} already formatted", :white if options[:verbose] && !options[:check]
       cache&.mark_formatted(result[:file])
     end
-    
+
     def write_formatted_file(result, cache)
       File.write(result[:file], result[:formatted])
       say "✓ Formatted #{result[:file]}", :green unless options[:quiet]
       cache&.mark_formatted(result[:file])
     end
-    
+
     def display_summary(stats, total_files)
-      @last_stats = stats  # Store for verbose details
+      @last_stats = stats # Store for verbose details
       unchanged_count = total_files - stats[:changed] - stats[:errors]
-      
+
       if stats[:errors].positive?
         display_error_summary(stats[:errors])
       elsif options[:check] && stats[:failed].positive?
@@ -300,22 +299,22 @@ module Rfmt
       else
         display_normal_summary(stats[:changed], unchanged_count, total_files)
       end
-      
+
       display_verbose_details(total_files) if options[:verbose] && !options[:quiet]
     end
-    
+
     def display_error_summary(error_count)
       say "\n✗ Failed: #{error_count} error(s) occurred", :red
     end
-    
+
     def display_check_failed_summary(failed_count)
       say "\n✗ Check failed: #{failed_count} file(s) need formatting", :yellow
     end
-    
+
     def display_quiet_summary(changed_count)
       say "✓ #{changed_count} files formatted", :cyan if changed_count.positive?
     end
-    
+
     def display_normal_summary(changed_count, unchanged_count, total_files)
       if total_files == 1
         if changed_count.positive?
@@ -328,28 +327,28 @@ module Rfmt
         display_file_breakdown(changed_count, unchanged_count)
       end
     end
-    
+
     def display_file_breakdown(changed_count, unchanged_count)
       return unless changed_count.positive? || unchanged_count.positive?
-      
+
       parts = []
       parts << "#{changed_count} formatted" if changed_count.positive?
       parts << "#{unchanged_count} unchanged" if unchanged_count.positive?
       say "  (#{parts.join(', ')})", :white
     end
-    
+
     def display_verbose_details(total_files)
       say "\nDetails:", :blue
       say "  Total files: #{total_files}", :blue
-      
+
       # Duration is collected if available
-      if defined?(@last_stats) && @last_stats[:total_duration]
-        duration = @last_stats[:total_duration].round(2)
-        say "  Total time: #{duration}s", :blue
-        say "  Files/sec: #{(total_files / duration).round(1)}", :blue if duration > 0
-      end
+      return unless defined?(@last_stats) && @last_stats[:total_duration]
+
+      duration = @last_stats[:total_duration].round(2)
+      say "  Total time: #{duration}s", :blue
+      say "  Files/sec: #{(total_files / duration).round(1)}", :blue if duration.positive?
     end
-    
+
     def should_exit_with_error?(stats)
       (options[:check] && stats[:failed].positive?) || stats[:errors].positive?
     end

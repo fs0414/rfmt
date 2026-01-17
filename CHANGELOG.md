@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+## [1.3.4] - 2026-01-17
+
+### Added
+- New `rfmt_fast` executable for optimized performance
+- Automatic parallel processing detection logic
+- Enhanced logging and summary display functionality
+
+### Changed  
+- Optimize logging and summary display performance
+- Improve parallel execution logic with automatic detection
+- Update README with new features and usage examples
+- Code formatting improvements with Rubocop compliance
+
+### Fixed
+- Logger optimization to reduce overhead
+- Parallel processing logic refinements
+
 ## [1.3.3] - 2026-01-17
 
 ### Fixed

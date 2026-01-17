@@ -237,9 +237,6 @@ impl Emitter {
             })
     }
 
-    /// Emit comments that are within a given line range (exclusive of end_line)
-    /// Uses BTreeMap index for O(log n) lookup instead of O(n) iteration
-
     /// Emit comments that appear immediately before the end statement while preserving their position
     /// This is crucial for maintaining semantic relationships between comments and the code they precede
     fn emit_comments_before_end(

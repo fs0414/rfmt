@@ -166,6 +166,12 @@ Format multiple files:
 rfmt lib/**/*.rb
 ```
 
+Format all files in your project:
+
+```bash
+rfmt .
+```
+
 Check if files need formatting (CI/CD):
 
 ```bash
@@ -178,12 +184,92 @@ Show diff without modifying files:
 rfmt lib/user.rb --diff
 ```
 
+Quiet mode (minimal output):
+
+```bash
+rfmt --quiet lib/**/*.rb
+```
+
 Enable verbose output for debugging:
 
 ```bash
-rfmt lib/user.rb --verbose
-# or use environment variable
-DEBUG=1 rfmt lib/user.rb
+rfmt --verbose lib/user.rb
+```
+
+#### Common Options
+
+| Option | Description |
+|--------|-------------|
+| `--check` | Check formatting without writing files |
+| `--diff` | Show diff of changes |
+| `--quiet` | Minimal output |
+| `--verbose` | Detailed output with timing |
+
+### Output Modes
+
+**Normal mode** (default):
+```bash
+$ rfmt app/
+Processing 25 file(s)...
+✓ Formatted app/controllers/users_controller.rb
+✓ Formatted app/models/user.rb
+
+✓ Processed 25 files
+  (3 formatted, 22 unchanged)
+```
+
+**Quiet mode** (`--quiet` or `-q`):
+```bash
+$ rfmt --quiet app/
+✓ 3 files formatted
+```
+
+**Verbose mode** (`--verbose` or `-v`):
+```bash
+$ rfmt --verbose app/
+Processing 25 file(s)...
+Using sequential processing for 25 files
+✓ Formatted app/controllers/users_controller.rb  
+✓ app/models/application_record.rb already formatted
+...
+
+✓ Processed 25 files
+  (3 formatted, 22 unchanged)
+
+Details:
+  Total files: 25
+  Total time: 0.45s
+  Files/sec: 55.6
+```
+
+### Parallel Processing
+
+rfmt automatically chooses the optimal processing mode:
+
+- **< 20 files**: Sequential processing (fastest for small batches)  
+- **20-49 files**: Automatic based on average file size
+- **≥ 50 files**: Parallel processing (utilizes multiple cores)
+
+You can override this behavior:
+
+```bash
+# Force parallel processing
+rfmt --parallel app/
+
+# Force sequential processing  
+rfmt --no-parallel app/
+```
+
+### Cache Management
+
+rfmt uses caching to improve performance on large codebases:
+
+```bash
+# Clear cache if needed
+rfmt cache clear
+
+# View cache statistics  
+rfmt cache stats
 ```
 
 ### Ruby API

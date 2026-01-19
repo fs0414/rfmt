@@ -4,24 +4,16 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system overlays;
+          inherit system;
         };
 
-        # Rust toolchain matching CI requirements
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "clippy" "rustfmt" ];
-        };
+        # Use stable Nixpkgs Rust (better macOS compatibility)
 
         # Ruby version matching mise.toml
         rubyVersion = pkgs.ruby_3_4;
@@ -31,13 +23,17 @@
           # Core dependencies
           rubyVersion
           rubyVersion.devEnv
-          rustToolchain
+          rustc
+          cargo
+          clippy
+          rustfmt
 
           # System dependencies for building gems with native extensions
           pkg-config
           openssl
           zlib
           libffi
+          libyaml  # Required for psych gem
           
           # Build tools
           gcc
@@ -51,7 +47,8 @@
           sqlite
         ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
           # macOS specific dependencies
-          pkgs.libiconv
+          # Use darwin-specific libiconv to avoid conflicts
+          pkgs.darwin.libiconv
         ];
 
         # Development shell environment variables
@@ -66,7 +63,7 @@
           RUSTUP_HOME = "$PWD/.nix-rustup-home";
           
           # Build environment
-          PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.libffi.dev}/lib/pkgconfig";
+          PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.libffi.dev}/lib/pkgconfig:${pkgs.libyaml}/lib/pkgconfig";
           
           # Ensure native extensions can find system libraries
           LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
@@ -74,9 +71,6 @@
           
           # Magnus/rb-sys specific
           RUBY_CC_VERSION = rubyVersion.version;
-        } // pkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
-          # macOS specific environment
-          DYLD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
         };
 
       in
@@ -85,14 +79,15 @@
         devShells.default = pkgs.mkShell {
           inherit buildInputs;
           
+          # Standard Nixpkgs approach for macOS library conflicts
+          NIX_CFLAGS_COMPILE = pkgs.lib.optionalString pkgs.stdenv.isDarwin 
+            "-I${pkgs.darwin.libiconv}/include";
+          NIX_LDFLAGS = pkgs.lib.optionalString pkgs.stdenv.isDarwin 
+            "-L${pkgs.darwin.libiconv}/lib -liconv";
+          
           shellHook = ''
-            echo "🚀 Entering rfmt development environment"
-            echo "Ruby: ${rubyVersion.version}"
-            echo "Rust: $(${rustToolchain}/bin/rustc --version)"
-            echo ""
-            
-            # Create local directories for gems and cargo
-            mkdir -p .nix-gem-home .nix-cargo-home .nix-rustup-home
+            # Silent setup - only show errors
+            mkdir -p .nix-gem-home .nix-cargo-home .nix-rustup-home 2>/dev/null
             
             # Set environment variables
             ${pkgs.lib.concatStringsSep "\n" 
@@ -101,19 +96,18 @@
             # Add local bin directories to PATH
             export PATH="$PWD/.nix-gem-home/bin:$PWD/.nix-cargo-home/bin:$PATH"
             
-            # Verify installation
-            echo "📦 Development tools ready:"
-            echo "  - Ruby: $(ruby --version)"
-            echo "  - Bundler: $(bundle --version)"
-            echo "  - Cargo: $(cargo --version)"
-            echo "  - Rust: $(rustc --version)"
-            echo ""
-            echo "🔧 Quick commands:"
-            echo "  bundle install     # Install Ruby dependencies"
-            echo "  bundle exec rake compile  # Build Rust extension"
-            echo "  bundle exec rspec  # Run tests"
-            echo "  cargo test --manifest-path ext/rfmt/Cargo.toml  # Run Rust tests"
-            echo ""
+            
+            # Customize shell prompt to be cleaner
+            if [ -n "$BASH_VERSION" ]; then
+              export PS1="(nix:rfmt) \[\033[1;34m\]\W\[\033[0m\] $ "
+            elif [ -n "$ZSH_VERSION" ]; then
+              export PROMPT="(nix:rfmt) %F{blue}%1~%f $ "
+            else
+              export PS1="(nix:rfmt) \W $ "
+            fi
+            
+            # Simple welcome message
+            echo "🚀 rfmt dev env ready | Ruby ${rubyVersion.version} | $(rustc --version 2>/dev/null | cut -d' ' -f1-2 || echo "Rust loading...")"
           '';
         };
 
@@ -128,7 +122,8 @@
 
           nativeBuildInputs = with pkgs; [
             rubyVersion
-            rustToolchain
+            rustc
+            cargo
             bundler-audit
           ];
 
@@ -234,7 +229,7 @@
         checks = pkgs.lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
           # Rust formatting (disabled on macOS for now due to SDK issues)
           rustfmt = pkgs.runCommand "rfmt-rustfmt-check" {
-            buildInputs = [ rustToolchain ];
+            buildInputs = [ pkgs.rustfmt pkgs.cargo ];
           } ''
             cd ${./.}
             cargo fmt --manifest-path ext/rfmt/Cargo.toml -- --check

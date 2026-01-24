@@ -115,6 +115,37 @@ RSpec.describe Rfmt do
       expect(result).to include('END { teardown }')
     end
 
+    it 'formats endless method with preceding comment (Issue #71)' do
+      source = <<~RUBY
+        class Test
+          # comment
+          def a = nil
+        end
+      RUBY
+
+      # Should not panic (the main fix for Issue #71)
+      result = Rfmt.format(source)
+
+      expect(result).to include('class Test')
+      expect(result).to include('# comment')
+      expect(result).to include('def a')
+      expect(result).to include('nil')
+    end
+
+    it 'formats endless method without comment' do
+      source = <<~RUBY
+        class Foo
+          def bar = 42
+        end
+      RUBY
+
+      # Should not panic
+      result = Rfmt.format(source)
+
+      expect(result).to include('def bar')
+      expect(result).to include('42')
+    end
+
     describe 'inline comments after blocks' do
       it 'preserves inline comments after inline brace blocks' do
         source = "b.each { p it } # c\n"

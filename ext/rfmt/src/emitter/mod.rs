@@ -144,6 +144,10 @@ impl Emitter {
     /// Get comment indices in the given line range [start_line, end_line)
     /// Uses BTreeMap range for O(log n) lookup instead of O(n) iteration
     fn get_comment_indices_in_range(&self, start_line: usize, end_line: usize) -> Vec<usize> {
+        // Guard against invalid range (e.g., endless methods where start_line >= end_line)
+        if start_line >= end_line {
+            return Vec::new();
+        }
         self.comments_by_line
             .range(start_line..end_line)
             .flat_map(|(_, indices)| indices.iter().copied())
@@ -228,6 +232,10 @@ impl Emitter {
     /// Check if there are any unemitted comments in the given line range
     /// Uses BTreeMap index for O(log n) lookup instead of O(n) iteration
     fn has_comments_in_range(&self, start_line: usize, end_line: usize) -> bool {
+        // Guard against invalid range (e.g., endless methods where start_line >= end_line)
+        if start_line >= end_line {
+            return false;
+        }
         self.comments_by_line
             .range(start_line..end_line)
             .flat_map(|(_, indices)| indices.iter())

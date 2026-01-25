@@ -1,5 +1,23 @@
 ## [Unreleased]
 
+## [1.5.0] - 2026-01-25
+
+### Added
+- Docker Compose test environment setup (#84)
+- Support for `then` expression emission (#80)
+- CI support for Ruby 3.4 and Ruby 4 (#82)
+
+### Changed
+- Upgrade Magnus (Rust-Ruby FFI library) (#83)
+- Optimize Docker build with multi-stage and caching (#84)
+- Upgrade unicode-emoji dependency
+
+### Fixed
+- Preserve heredoc content and closing identifier (#81)
+- Fix `rescue`/`ensure` clauses being deleted inside `do...end` blocks (#78)
+- Fix inline comment node handling (#77)
+- Fix BTreeMap range error (Issue #71)
+
 ## [1.4.1] - 2026-01-17
 
 ### Fixed

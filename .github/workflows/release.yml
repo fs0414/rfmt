@@ -18,7 +18,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '4.0'
+        ruby-version: '3.4'
 
     - name: Extract version from tag
       id: extract_version
@@ -70,13 +70,13 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '4.0'
+        ruby-version: '3.4'
         bundler-cache: true
 
     - uses: oxidize-rb/actions/cross-gem@v1
       with:
         platform: ${{ matrix.platform }}
-        ruby-versions: '3.4,4.0'
+        ruby-versions: '3.3,3.4'
 
     - name: Upload gem artifact
       uses: actions/upload-artifact@v4
@@ -95,7 +95,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '4.0'
+        ruby-version: '3.4'
         bundler-cache: true
 
     - name: Build source gem

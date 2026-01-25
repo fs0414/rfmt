@@ -8,37 +8,19 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Default Ruby versions to test
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEFAULT_VERSIONS=("3.4" "4.0")
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m'
 
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-# Parse arguments
-if [ $# -eq 0 ]; then
+if [[ $# -eq 0 ]]; then
     VERSIONS=("${DEFAULT_VERSIONS[@]}")
 else
     VERSIONS=("$@")
@@ -64,9 +46,9 @@ for version in "${VERSIONS[@]}"; do
 
     IMAGE_NAME="rfmt-test:ruby-${version}"
 
-    # Build the test image
     if docker build \
         --build-arg RUBY_VERSION="${version}" \
+        --target test \
         -f docker/Dockerfile.test \
         -t "$IMAGE_NAME" \
         . 2>&1; then
@@ -74,18 +56,13 @@ for version in "${VERSIONS[@]}"; do
         log_success "Ruby ${version}: gem install succeeded!"
         PASSED_VERSIONS+=("$version")
 
-        # Run additional verification
         log_info "Running verification tests..."
-        if docker run --rm "$IMAGE_NAME" ruby -e "
+        docker run --rm "$IMAGE_NAME" ruby -e "
             require 'rfmt'
             puts \"  Version: #{Rfmt::VERSION}\"
             puts \"  Rust version: #{Rfmt.rust_version}\"
             puts \"  Ruby: #{RUBY_VERSION}\"
-        "; then
-            log_success "Ruby ${version}: verification passed!"
-        else
-            log_warn "Ruby ${version}: verification had issues"
-        fi
+        " && log_success "Ruby ${version}: verification passed!"
     else
         log_error "Ruby ${version}: gem install FAILED!"
         FAILED_VERSIONS+=("$version")
@@ -99,11 +76,9 @@ echo "  Summary"
 echo "========================================"
 echo ""
 
-if [ ${#PASSED_VERSIONS[@]} -gt 0 ]; then
-    log_success "Passed: ${PASSED_VERSIONS[*]}"
-fi
+[[ ${#PASSED_VERSIONS[@]} -gt 0 ]] && log_success "Passed: ${PASSED_VERSIONS[*]}"
 
-if [ ${#FAILED_VERSIONS[@]} -gt 0 ]; then
+if [[ ${#FAILED_VERSIONS[@]} -gt 0 ]]; then
     log_error "Failed: ${FAILED_VERSIONS[*]}"
     echo ""
     exit 1

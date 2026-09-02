@@ -1,6 +1,6 @@
 [package]
 name = "rfmt"
-version = "1.3.2"
+version = "2.0.0-beta1"
 edition = "2021"
 authors = ["fujitani sora <fujitanisora0414@gmail.com>"]
 license = "MIT"
@@ -8,52 +8,37 @@ publish = false
 
 [lib]
 name = "rfmt"
-crate-type = ["cdylib"]
+# rlib in addition to cdylib so integration tests (tests/) can link the crate
+crate-type = ["cdylib", "rlib"]
+# The doc examples are illustrative and were never compiled while the crate
+# was cdylib-only; keep them out of the test suite
+doctest = false
 
 [dependencies]
 # Ruby FFI
-magnus = { version = "0.6.2" }
-rb-sys = "0.9.117"
+magnus = { version = "0.8.2" }
+rb-sys = "0.9.124"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-rmp-serde = "1.3"
 
 # Error handling
 thiserror = "1.0"
-anyhow = "1.0"
-
-# Parallel processing
-rayon = "1.8"
-
-# Caching
-lru = "0.12"
 
 # Logging
-log = "0.4"
-env_logger = "0.11"
+# "std" was previously enabled transitively via env_logger; set_boxed_logger needs it
+log = { version = "0.4", features = ["std"] }
 
 # Configuration
-config = "0.14"
-toml = "0.8"
 dirs = "5.0"
 globset = "0.4"
-
-# Security and resource management
-num_cpus = "1.16"
-
-# CLI (optional)
-clap = { version = "4.4", features = ["derive"], optional = true }
+ruby-prism = "1.9"
 
 [dev-dependencies]
-# Testing
-proptest = "1.4"
 insta = "1.34"
-criterion = "0.5"
 tempfile = "3.8"
 
-[features]
-default = ["cli"]
-cli = ["clap"]
+# Note: Benchmarks are included as part of the test suite due to Ruby FFI linking constraints.
+# Run performance tests with: cargo test --release perf_

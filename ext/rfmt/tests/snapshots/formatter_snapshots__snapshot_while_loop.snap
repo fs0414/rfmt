@@ -1,0 +1,7 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"while x > 0\\n  x -= 1\\nend\")"
+---
+while x > 0
+  x -= 1
+end

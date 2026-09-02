@@ -15,7 +15,7 @@ This guide covers testing, building, and releasing rfmt.
 
 ### Required Tools
 
-- **Ruby**: 3.0 or later
+- **Ruby**: 3.3 or later
 - **Rust**: 1.70 or later (installed via rustup)
 - **Bundler**: `gem install bundler`
 - **Rake**: Included in Ruby standard library
@@ -266,6 +266,14 @@ cargo test test_node_creation
 cargo test parse
 ```
 
+### Corpus Check
+
+The corpus check formats every Ruby file in the repository and verifies with the prism gem (a development-only dependency) that the reformatted output parses to a structurally identical AST. Together with the parity fixtures it is the main safety net for formatter changes:
+
+```bash
+bundle exec ruby scripts/corpus_check.rb
+```
+
 ### Coverage
 
 ```bash
@@ -511,14 +519,7 @@ ls -la lib/rfmt/rfmt.so      # Linux
 
 #### Problem: "Prism integration error"
 
-```bash
-# Check Prism gem version
-bundle list | grep prism
-
-# Should be ~> 1.6.0
-# Update if needed
-bundle update prism
-```
+Parsing happens inside the Rust extension via the statically linked ruby-prism crate, so this error indicates a bug in rfmt itself rather than a dependency problem. The prism gem in the Gemfile is a development-only dependency used by the corpus check and parity fixtures; updating it does not affect runtime parsing. Please open an issue with the input that triggers the error.
 
 #### Problem: Segmentation fault
 
@@ -642,7 +643,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ruby: ['3.0', '3.1', '3.2', '3.3']
+        ruby: ['3.3', '3.4', '4.0']
 
     steps:
     - uses: actions/checkout@v4

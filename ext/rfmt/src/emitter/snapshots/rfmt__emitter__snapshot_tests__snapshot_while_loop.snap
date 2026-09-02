@@ -1,8 +1,0 @@
----
-source: ext/rfmt/src/emitter/mod.rs
-assertion_line: 2001
-expression: result
----
-while x > 0
-  x -= 1
-end

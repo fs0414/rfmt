@@ -1,0 +1,10 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"case x\\nwhen 1\\n  :one\\nelse\\n  :other\\nend\")"
+---
+case x
+when 1
+  :one
+else
+  :other
+end

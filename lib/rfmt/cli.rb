@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'thor'
 
 # Check for verbose flag before loading rfmt to set debug mode early
-ENV['RFMT_DEBUG'] = '1' if ARGV.include?('-v') || ARGV.include?('--verbose')
+ENV['RFMT_DEBUG'] = '1' if ARGV.include?('--verbose')
 
 require 'rfmt'
 require 'rfmt/configuration'
@@ -44,20 +45,33 @@ module Rfmt
 
   # Command Line Interface for rfmt
   class CLI < Thor
-    class_option :config, type: :string, desc: 'Path to configuration file'
-    class_option :verbose, type: :boolean, aliases: '-v', desc: 'Verbose output'
+    def self.exit_on_failure?
+      true
+    end
+
+    # Constants
+    PROGRESS_THRESHOLD = 20  # Show progress for file counts >= this
+    PROGRESS_INTERVAL = 10   # Update progress every N files
+
+    class_option :config, type: :string, desc: 'Path to configuration file (formatting options and file selection)'
+    class_option :verbose, type: :boolean, desc: 'Verbose output'
 
     default_command :format
+
+    # Map -v and --version to version command
+    map '-v' => 'version'
+    map '--version' => 'version'
 
     desc 'format [FILES]', 'Format Ruby files (default command)'
     option :write, type: :boolean, default: true, desc: 'Write formatted output'
     option :check, type: :boolean, desc: "Check if files are formatted (don't write)"
     option :diff, type: :boolean, desc: 'Show diff of changes'
     option :diff_format, type: :string, default: 'unified', desc: 'Diff format: unified, side_by_side, or color'
-    option :parallel, type: :boolean, default: true, desc: 'Process files in parallel'
+    option :parallel, type: :boolean, desc: 'Use parallel processing (auto-disabled for <20 files)'
     option :jobs, type: :numeric, desc: 'Number of parallel jobs (default: CPU count)'
     option :cache, type: :boolean, default: true, desc: 'Use cache to skip unchanged files'
     option :cache_dir, type: :string, desc: 'Cache directory (default: ~/.cache/rfmt)'
+    option :quiet, type: :boolean, aliases: '-q', desc: 'Minimal output (errors and summary only)'
     def format(*files)
       config = load_config
       files = files.empty? ? config.files_to_format : files.flatten
@@ -67,33 +81,32 @@ module Rfmt
         return
       end
 
-      # Initialize cache
-      cache = if options[:cache]
-                cache_opts = options[:cache_dir] ? { cache_dir: options[:cache_dir] } : {}
-                Cache.new(**cache_opts)
-              end
-
-      # Filter files using cache
-      if cache
-        original_count = files.size
-        files = files.select { |file| cache.needs_formatting?(file) }
-        skipped = original_count - files.size
-        say "ℹ Skipped #{skipped} unchanged file(s) (cached)", :cyan if skipped.positive? && options[:verbose]
-      end
+      # Initialize and use cache if enabled
+      cache = initialize_cache_if_enabled
+      files = filter_files_with_cache(files, cache)
 
       if files.empty?
-        say '✓ All files are already formatted (cached)', :green
+        say '✓ All files are already formatted (cached)', :cyan
         return
       end
 
-      # Show progress message
-      if files.size == 1
-        say "Processing #{files.first}...", :blue
-      else
-        say "Processing #{files.size} file(s)...", :blue
+      # Show progress message (unless in quiet mode)
+      unless options[:quiet]
+        if files.size == 1
+          say "Processing #{files.first}...", :blue
+        else
+          say "Processing #{files.size} file(s)...", :blue
+        end
       end
 
-      results = if options[:parallel] && files.size > 1
+      use_parallel = should_use_parallel?(files)
+
+      if options[:verbose] && files.size > 1
+        mode = use_parallel ? "parallel (#{options[:jobs] || 'auto'} jobs)" : 'sequential'
+        say "Using #{mode} processing for #{files.size} files", :blue
+      end
+
+      results = if use_parallel
                   format_files_parallel(files)
                 else
                   format_files_sequential(files)
@@ -112,11 +125,11 @@ module Rfmt
       say "Rust extension: #{Rfmt.rust_version}"
     end
 
-    desc 'config', 'Show current configuration'
+    desc 'config', 'Show the effective configuration the formatter will use'
     def config_cmd
-      config = load_config
-      require 'json'
-      say JSON.pretty_generate(config.config)
+      say Rfmt.resolved_config(config_path: options[:config])
+    rescue Rfmt::Error => e
+      raise Thor::Error, e.message
     end
 
     desc 'cache SUBCOMMAND', 'Manage cache'
@@ -140,38 +153,126 @@ module Rfmt
 
     private
 
+    # Intelligently decide whether to use parallel processing
+    def should_use_parallel?(files)
+      return false if files.size <= 1
+
+      # Check if parallel option was explicitly set via command line
+      # Thor sets options[:parallel] to true/false for --parallel/--no-parallel
+      # and nil when not specified
+      return options[:parallel] unless options[:parallel].nil?
+
+      # Auto decision based on workload characteristics
+      # Calculate total size for better decision
+      total_size = files.sum do |f|
+        File.size(f)
+      rescue StandardError
+        0
+      end
+      avg_size = total_size / files.size.to_f
+
+      # Decision matrix:
+      # - Less than 20 files: sequential (overhead > benefit)
+      # - 20-50 files with small size (<10KB avg): sequential
+      # - 20-50 files with large size (>10KB avg): parallel
+      # - More than 50 files: always parallel
+
+      if files.size < 20
+        false
+      elsif files.size < 50
+        avg_size > 10_000 # 10KB threshold
+      else
+        true
+      end
+    end
+
     def load_config
       if options[:config]
+        validate_explicit_config!(options[:config])
         Configuration.new(file: options[:config])
       else
         Configuration.discover
       end
     end
 
+    # Fail fast once instead of repeating the same load error per file
+    def validate_explicit_config!(path)
+      raise Thor::Error, "Configuration file not found: #{path}" unless File.exist?(path)
+
+      begin
+        Rfmt.resolved_config(config_path: path)
+      rescue Rfmt::Error => e
+        raise Thor::Error, e.message
+      end
+    end
+
+    def initialize_cache_if_enabled
+      return nil unless options[:cache]
+
+      cache_opts = options[:cache_dir] ? { cache_dir: options[:cache_dir] } : {}
+      Cache.new(**cache_opts)
+    end
+
+    def filter_files_with_cache(files, cache)
+      return files unless cache
+
+      original_count = files.size
+      filtered = files.select { |file| cache.needs_formatting?(file) }
+
+      log_cache_skip(original_count - filtered.size)
+      filtered
+    end
+
+    def log_cache_skip(skipped_count)
+      return unless skipped_count.positive? && options[:verbose]
+
+      say "ℹ Skipped #{skipped_count} unchanged file(s) (cached)", :cyan
+    end
+
     def format_files_sequential(files)
-      files.map do |file|
+      show_progress = should_show_progress?(files)
+
+      files.map.with_index do |file, index|
+        display_progress(index, files.size) if show_progress && (index % PROGRESS_INTERVAL).zero?
         format_single_file(file)
       end
+    end
+
+    def should_show_progress?(files)
+      !options[:quiet] && files.size >= PROGRESS_THRESHOLD
+    end
+
+    def display_progress(index, total)
+      percentage = ((index.to_f / total) * 100).round
+      say "[#{index}/#{total}] #{percentage}% complete...", :blue
     end
 
     def format_files_parallel(files)
       require 'parallel'
 
-      # Determine number of processes to use
-      process_count = options[:jobs] || Parallel.processor_count
-
-      say "Processing #{files.size} files with #{process_count} parallel jobs...", :blue if options[:verbose]
+      process_count = determine_process_count
+      log_parallel_processing(files.size, process_count)
 
       Parallel.map(files, in_processes: process_count) do |file|
         format_single_file(file)
       end
     end
 
+    def determine_process_count
+      options[:jobs] || Parallel.processor_count
+    end
+
+    def log_parallel_processing(file_count, process_count)
+      return unless options[:verbose]
+
+      say "Processing #{file_count} files with #{process_count} parallel jobs...", :blue
+    end
+
     def format_single_file(file)
       start_time = Time.now
       source = File.read(file)
 
-      formatted = Rfmt.format(source)
+      formatted = Rfmt.format(source, config_path: options[:config])
       changed = source != formatted
 
       {
@@ -191,69 +292,139 @@ module Rfmt
     end
 
     def handle_results(results, cache = nil)
-      failed_count = 0
-      changed_count = 0
-      error_count = 0
+      stats = process_results(results, cache)
+      stats[:total_duration] = results.sum { |r| r[:duration] || 0 }
+      cache&.save
+      display_summary(stats, results.size)
+      exit(1) if should_exit_with_error?(stats)
+    end
+
+    def process_results(results, cache)
+      stats = { changed: 0, errors: 0, failed: 0, duration: 0 }
 
       results.each do |result|
         if result[:error]
-          say "Error in #{result[:file]}: #{result[:error]}", :red
-          error_count += 1
-          next
-        end
-
-        if result[:changed]
-          changed_count += 1
-
-          if options[:check]
-            say "#{result[:file]} needs formatting", :yellow
-            failed_count += 1
-            show_diff(result[:file], result[:original], result[:formatted]) if options[:diff]
-          elsif options[:diff]
-            show_diff(result[:file], result[:original], result[:formatted])
-          elsif options[:write]
-            File.write(result[:file], result[:formatted])
-            # Always show formatted files (not just in verbose mode)
-            say "✓ Formatted #{result[:file]}", :green
-
-            # Update cache after successful write
-            cache&.mark_formatted(result[:file])
-          else
-            puts result[:formatted]
-          end
+          handle_error_result(result, stats)
+        elsif result[:changed]
+          handle_changed_result(result, stats, cache)
         else
-          # Show already formatted files in non-check mode
-          say "✓ #{result[:file]} already formatted", :cyan unless options[:check]
-
-          # Update cache even if no changes (file was checked)
-          cache&.mark_formatted(result[:file])
+          handle_unchanged_result(result, cache)
         end
       end
 
-      # Save cache to disk
-      cache&.save
+      stats
+    end
 
-      # Summary - always show a summary message
-      if error_count.positive?
-        say "\n✗ Failed: #{error_count} error(s) occurred", :red
-      elsif options[:check] && failed_count.positive?
-        say "\n✗ Check failed: #{failed_count} file(s) need formatting", :yellow
-      elsif changed_count.positive?
-        # Success message with appropriate details
-        say "\n✓ Success! Formatted #{changed_count} file(s)", :green
-      elsif results.size == 1
-        say "\n✓ Success! File is already formatted", :green
+    def handle_error_result(result, stats)
+      say "Error in #{result[:file]}: #{result[:error]}", :red
+      stats[:errors] += 1
+    end
+
+    def handle_changed_result(result, stats, cache)
+      stats[:changed] += 1
+
+      if options[:check]
+        say "#{result[:file]} needs formatting", :yellow
+        stats[:failed] += 1
+        show_diff(result[:file], result[:original], result[:formatted]) if options[:diff]
+      elsif options[:diff]
+        show_diff(result[:file], result[:original], result[:formatted])
+      elsif options[:write]
+        write_formatted_file(result, cache)
       else
-        say "\n✓ Success! All #{results.size} files are already formatted", :green
+        puts result[:formatted]
+      end
+    end
+
+    def handle_unchanged_result(result, cache)
+      say "✓ #{result[:file]} already formatted", :white if options[:verbose] && !options[:check]
+      cache&.mark_formatted(result[:file])
+    end
+
+    def write_formatted_file(result, cache)
+      atomic_write(result[:file], result[:formatted])
+      say "✓ Formatted #{result[:file]}", :green unless options[:quiet]
+      cache&.mark_formatted(result[:file])
+    end
+
+    # Temp file must live in the same directory: rename across filesystems is not atomic.
+    def atomic_write(path, content)
+      # rename would replace a symlink itself; write to its target instead
+      path = File.realpath(path) if File.symlink?(path)
+      tmp_path = "#{path}.rfmt-#{Process.pid}.tmp"
+      mode = File.stat(path).mode
+      File.write(tmp_path, content)
+      File.chmod(mode, tmp_path)
+      File.rename(tmp_path, path)
+    ensure
+      FileUtils.rm_f(tmp_path)
+    end
+
+    def display_summary(stats, total_files)
+      @last_stats = stats # Store for verbose details
+      unchanged_count = total_files - stats[:changed] - stats[:errors]
+
+      if stats[:errors].positive?
+        display_error_summary(stats[:errors])
+      elsif options[:check] && stats[:failed].positive?
+        display_check_failed_summary(stats[:failed])
+      elsif options[:quiet]
+        display_quiet_summary(stats[:changed])
+      else
+        display_normal_summary(stats[:changed], unchanged_count, total_files)
       end
 
-      # Detailed summary in verbose mode
-      if options[:verbose]
-        say "Total: #{results.size} file(s) processed", :blue
-        say "Changed: #{changed_count} file(s)", :yellow if changed_count.positive?
-      end
+      display_verbose_details(total_files) if options[:verbose] && !options[:quiet]
+    end
 
-      exit(1) if (options[:check] && failed_count.positive?) || error_count.positive?
+    def display_error_summary(error_count)
+      say "\n✗ Failed: #{error_count} error(s) occurred", :red
+    end
+
+    def display_check_failed_summary(failed_count)
+      say "\n✗ Check failed: #{failed_count} file(s) need formatting", :yellow
+    end
+
+    def display_quiet_summary(changed_count)
+      say "✓ #{changed_count} files formatted", :cyan if changed_count.positive?
+    end
+
+    def display_normal_summary(changed_count, unchanged_count, total_files)
+      if total_files == 1
+        if changed_count.positive?
+          say "\n✓ Formatted 1 file", :cyan
+        else
+          say "\n✓ File is already formatted", :cyan
+        end
+      else
+        say "\n✓ Processed #{total_files} files", :cyan
+        display_file_breakdown(changed_count, unchanged_count)
+      end
+    end
+
+    def display_file_breakdown(changed_count, unchanged_count)
+      return unless changed_count.positive? || unchanged_count.positive?
+
+      parts = []
+      parts << "#{changed_count} formatted" if changed_count.positive?
+      parts << "#{unchanged_count} unchanged" if unchanged_count.positive?
+      say "  (#{parts.join(', ')})", :white
+    end
+
+    def display_verbose_details(total_files)
+      say "\nDetails:", :blue
+      say "  Total files: #{total_files}", :blue
+
+      # Duration is collected if available
+      return unless defined?(@last_stats) && @last_stats[:total_duration]
+
+      duration = @last_stats[:total_duration].round(2)
+      say "  Total time: #{duration}s", :blue
+      say "  Files/sec: #{(total_files / duration).round(1)}", :blue if duration.positive?
+    end
+
+    def should_exit_with_error?(stats)
+      (options[:check] && stats[:failed].positive?) || stats[:errors].positive?
     end
 
     def show_diff(file, original, formatted)

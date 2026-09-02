@@ -1,5 +1,206 @@
 ## [Unreleased]
 
+## [2.0.0.beta1] - 2026-07-22
+
+Parsing now happens natively in Rust. The Ruby-side Prism parse and JSON handoff have been replaced by the ruby-prism crate with prism statically linked into the extension; Ruby remains the CLI/LSP shell.
+
+### Changed
+
+- Native parsing via the ruby-prism crate: in-process formatting is about 22x faster: 0.19 ms/file measured with `scripts/bench_format.rb`, against a historical pre-migration baseline of 4.28 ms/file
+- `--config` is now honored when formatting
+- File writes are atomic (write to a temp file, then rename)
+
+### Added
+
+- Output-validation guard: formatted output is re-parsed and rejected if it fails to parse
+- Corpus check (`scripts/corpus_check.rb`): reformats every Ruby file in the repository and verifies AST equivalence with the prism gem; runs in CI alongside the parity fixtures
+
+### Fixed
+
+- The `__END__` data section is no longer dropped from formatted output; everything from `__END__` to EOF is preserved byte-for-byte
+- Method chain continuation indentation is now computed from the statement's output position instead of its input column, so misindented input converges in a single pass; heredoc bodies inside a reformatted chain keep their content byte-identical
+- A trailing comment on an `else` line stays on that line instead of moving below it
+
+### Removed
+
+- prism gem runtime dependency; it remains a development-only dependency for the corpus check and parity fixtures
+
+## [1.7.0] - 2026-06-04
+
+rfmt now ships a standalone LSP server. Point any LSP-capable editor at `rfmt-lsp` and you get format-on-save — no Ruby LSP, no Gemfile, and no editor-specific plugin required. This makes rfmt usable from Helix, Neovim, Emacs, and any other LSP client, including in projects that don't bundle rfmt.
+
+### Added
+
+- Standalone LSP server `rfmt-lsp` (#108). Provides format-on-save in any LSP-capable editor without requiring Ruby LSP or a Gemfile:
+  - `textDocument/formatting` with full document sync; unsaved buffer contents are formatted via `didOpen`/`didChange` tracking
+  - `.rfmt.yml` is resolved relative to the workspace root (`rootUri`/`workspaceFolders`)
+  - Graceful handling of syntax errors (returns no edits instead of crashing), empty files, and unsupported LSP methods
+  - New `exe/rfmt-lsp` executable shipped with the gem
+- Editor setup guides for the standalone server (Neovim, Helix, Emacs eglot) in `docs/editors.md`
+
+## [1.6.3] - 2026-04-24
+
+Minor stability refinements on top of the 1.6.x architecture release. See the 1.6.1 notes below for the feature set this series delivers.
+
+## [1.6.2] - 2026-04-24
+
+Minor stability refinements on top of the 1.6.x architecture release. See the 1.6.1 notes below for the feature set this series delivers.
+
+## [1.6.1] - 2026-04-24
+
+Follow-up release consolidating the 1.6.0 architecture work.
+
+### Rule-based formatter
+
+The rule-based `format/` pipeline (`Formatter`, `Registry`, `Rule`) is the canonical formatting path, replacing the legacy monolithic emitter. Rules covering body indentation (`StatementsRule`), singleton classes (`SingletonClassRule`), and variable writes (`VariableWriteRule`) ship as part of the default registry. The Intermediate Representation (IR) module decouples parsing from emission for composability and testability.
+
+### Method chain reformatting
+
+Multi-line method chains can be reformatted from aligned style (indented under the first dot) to indented style (one level beyond the receiver), preserving the source's base indent. The pass is wired into the fallback path for resilience.
+
+### Printer optimizations
+
+The printer carries a pre-computed indent cache and inline hints for the hot path; `reformat_chain_lines` has been deduplicated across rules and uses `Cow<str>` to avoid allocations on pass-through.
+
+### Editor integration
+
+Setup guides for VSCode, Neovim, Helix, Emacs, and Zed land in the repository; every editor uses the Ruby LSP addon system, so there are no editor-specific plugins to maintain. The README's Editor Integration section replaces the previous "Coming Soon" placeholder with a VSCode quick start.
+
+## [1.6.0] - 2026-04-23
+
+### Added
+- **Rule-based formatter architecture**: new modular `format/` pipeline (`Formatter`, `Registry`, `Rule`) replacing the legacy monolithic emitter
+- **Intermediate Representation (IR) module**: decouples parsing from emission for composability and testability
+- New formatter rules: `StatementsRule` (body indentation), `SingletonClassRule`, `VariableWriteRule`
+- Method chain reformatting: convert aligned style to indented style when lines exceed the configured width
+- Chain reformatting wired into the fallback path for resilience
+- `config` module exported for test consumption
+- **Editor Integration Documentation**: comprehensive setup guides for VSCode, Neovim, Helix, Emacs, and Zed
+  - VSCode: Format on Save configuration with Ruby LSP, settings reference table, project-specific setup
+  - Zed: full configuration with `initialization_options` and `format_on_save`
+  - All editors work through the Ruby LSP addon system — no editor-specific plugins required
+- README: Editor Integration section updated with VSCode quick start (replacing "Coming Soon")
+
+### Changed
+- Printer optimized with indent cache and inline hints
+- `reformat_chain_lines` deduplicated across rules and optimized with `Cow` to reduce allocations
+- README: Neovim integration updated from CLI-based to Ruby LSP-based approach
+- Removed Sublime Text section from editor documentation (replaced by Zed)
+
+### Fixed
+- Prism comment JSON deserialization now accepts `comment_type` and `embdoc` fields (#97)
+- BTreeMap range panic when computing comment indices on edge inputs
+- Comment duplication during source extraction
+- Empty source input handled gracefully by the formatter runner
+- Clippy warnings: use `repeat_n`
+
+### Removed
+- Legacy `Emitter` module (1844 LOC) — superseded by the new `Formatter`
+
+## [1.5.3] - 2026-02-22
+
+### Changed
+- Update package dependencies
+
+## [1.5.2] - 2026-02-21
+
+### Added
+- Instance variable write node emission support (#92)
+
+### Changed
+- Nix dev environment optimization (build caching, direnv support, devShell splitting)
+- Code formatting improvements (clippy, rustfmt)
+
+### Fixed
+- Fix Nix bundler version conflict (remove pkgs.bundler, use Ruby built-in)
+
+## [1.5.1] - 2026-02-21
+
+### Fixed
+- Fix inline modifier `if`/`unless` formatting (#87)
+- Fix heredoc command incorrectly removed (#90, #86)
+- Fix method chain command dependency handling (#89, #85)
+
+### Added
+- Heredoc comment deletion support
+- Place block loop emission support
+
+### Changed
+- Update README.md
+- Code formatting improvements (RuboCop compliance)
+
+## [1.5.0] - 2026-01-25
+
+### Added
+- Docker Compose test environment setup (#84)
+- Support for `then` expression emission (#80)
+- CI support for Ruby 3.4 and Ruby 4 (#82)
+
+### Changed
+- Upgrade Magnus (Rust-Ruby FFI library) (#83)
+- Optimize Docker build with multi-stage and caching (#84)
+- Upgrade unicode-emoji dependency
+
+### Fixed
+- Preserve heredoc content and closing identifier (#81)
+- Fix `rescue`/`ensure` clauses being deleted inside `do...end` blocks (#78)
+- Fix inline comment node handling (#77)
+- Fix BTreeMap range error (Issue #71)
+
+## [1.4.1] - 2026-01-17
+
+### Fixed
+- Fixed comment positioning issue where standalone comments before `end` statements were incorrectly attached to previous code lines
+- Improved comment semantic preservation to maintain developer's original placement intent
+- Enhanced standalone comment detection logic to distinguish between inline and independent comments
+
+## [1.4.0] - 2026-01-17
+
+### Added
+- New `rfmt_fast` executable for optimized performance
+- Automatic parallel processing detection logic  
+- Enhanced logging and summary display functionality
+- CLI option mapping for `-v/--version` commands
+
+### Fixed
+- Fixed `-v` flag incorrectly triggering format instead of showing version
+- Fixed `--diff` option dependency issues (added `diffy` and `diff-lcs` to gemspec)
+- CLI option conflicts between verbose and version flags
+
+### Changed
+- Updated performance benchmarks documentation
+- Code formatting improvements with Rubocop compliance
+- Dependencies alphabetically sorted in gemspec
+
+## [1.3.4] - 2026-01-17
+
+### Added
+- New `rfmt_fast` executable for optimized performance
+- Automatic parallel processing detection logic
+- Enhanced logging and summary display functionality
+
+### Changed  
+- Optimize logging and summary display performance
+- Improve parallel execution logic with automatic detection
+- Update README with new features and usage examples
+- Code formatting improvements with Rubocop compliance
+
+### Fixed
+- Logger optimization to reduce overhead
+- Parallel processing logic refinements
+
+## [1.3.3] - 2026-01-17
+
+### Fixed
+- Add native extension loader for Ruby 3.3+ compatibility (#65)
+  - Resolves LoadError on Ruby 3.3+ arm64-darwin systems
+  - Implements dynamic path resolution for version-specific directories
+
+### Changed
+- Remove unnecessary String clones in comment emission (performance optimization)
+- Remove debug logs and obvious comments from codebase
+- Update .gitignore with development artifacts
+
 ## [1.3.2] - 2026-01-09
 
 ### Added

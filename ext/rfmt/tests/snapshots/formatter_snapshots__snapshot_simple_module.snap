@@ -1,0 +1,6 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"module MyModule\\nend\")"
+---
+module MyModule
+end

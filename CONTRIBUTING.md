@@ -23,7 +23,7 @@ This project adheres to the Contributor Covenant [Code of Conduct](CODE_OF_CONDU
 
 ### Prerequisites
 
-- Ruby 3.0 or higher
+- Ruby 3.3 or higher
 - Rust 1.70 or higher
 - Git
 - Bundler
@@ -73,8 +73,7 @@ bundle exec rspec
 rfmt/
 ├── lib/                    # Ruby code
 │   ├── rfmt.rb            # Main entry point
-│   └── rfmt/
-│       └── prism_bridge.rb # Ruby-Rust bridge
+│   └── rfmt/              # CLI, LSP, configuration
 ├── ext/rfmt/              # Rust extension
 │   ├── src/
 │   │   ├── lib.rs         # FFI interface
@@ -95,14 +94,13 @@ rfmt/
 ### Key Components
 
 #### Ruby Side (`lib/`)
-- **Rfmt module**: Main interface for users
-- **PrismBridge**: Bridges Ruby's Prism parser with Rust
+- **Rfmt module**: Main interface for users; parsing and formatting happen natively in Rust
 
 #### Rust Side (`ext/rfmt/src/`)
 - **error/**: Error types and handling (E001-E999)
 - **logging/**: Structured logging system
 - **debug/**: Debug context and macros
-- **parser/**: AST parsing from Prism JSON
+- **parser/**: Native parsing via the ruby-prism crate (prism statically linked)
 - **formatter/**: Formatting rules engine
 - **emitter/**: Formatted code output
 

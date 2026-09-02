@@ -1,0 +1,7 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"def hello\\n  42\\nend\")"
+---
+def hello
+  42
+end

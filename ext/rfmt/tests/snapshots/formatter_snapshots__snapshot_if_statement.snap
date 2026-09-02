@@ -1,0 +1,7 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"if x > 0\\n  puts \\\"positive\\\"\\nend\")"
+---
+if x > 0
+  puts "positive"
+end

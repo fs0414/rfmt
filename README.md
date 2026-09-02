@@ -23,13 +23,14 @@ A Ruby code formatter written in Rust
 ## What is rfmt?
 
 [RubyGems reference](https://rubygems.org/gems/rfmt)
+[DeepWiki rfmt](https://deepwiki.com/fs0414/rfmt)
 
 **rfmt** is a Ruby code formatter that enforces consistent style across your codebase. Key characteristics:
 
 - **Opinionated**: Minimal configuration with consistent output
 - **Idempotent**: Running multiple times produces identical results
 - **Comment preservation**: Maintains existing comment placement
-- **Rust implementation**: Core formatter implemented in Rust
+- **Rust implementation**: Parsing and formatting both run natively in Rust (via the [ruby-prism](https://crates.io/crates/ruby-prism) crate); Ruby provides the CLI and LSP shell
 
 ## Features
 
@@ -46,39 +47,30 @@ Enforces code style rules:
 - Quote style standardization
 - Method definition formatting
 
-## Performance Benchmarks
+## Performance
 
-Execution time comparison on a Rails project (111 files, 3,241 lines):
+Parsing and formatting both run natively in Rust (the [ruby-prism](https://crates.io/crates/ruby-prism) crate, with prism statically linked), so the per-file cost is well under a millisecond:
 
-| Test Type | Files | rfmt | RuboCop | Ratio |
-|-----------|-------|------|---------|-------|
-| Single File | 1 | 191ms | 1.38s | 7.2x |
-| Directory | 14 | 176ms | 1.68s | 9.6x |
-| Full Project (check) | 111 | 172ms | 4.36s | 25.4x |
+| Pipeline | In-process format time |
+|----------|------------------------|
+| Before native parsing (Ruby Prism parse + JSON handoff to Rust; historical, not reproducible from this checkout) | 4.28 ms/file |
+| Now (parsing and formatting in Rust) | 0.19 ms/file |
 
-**About this comparison:**
-- RuboCop times include startup overhead and loading all cops (linting rules)
-- RuboCop was run with default configuration (all cops enabled)
-- rfmt is a formatting-only tool with minimal overhead
-- Both tools were measured in check mode (no file modifications)
-- Results are averages from 10 runs per test
+Measured with `scripts/bench_format.rb` over rfmt's own `lib/` corpus on arm64 macOS, Ruby 3.4. Reproduce with:
 
-**Observations:**
-- rfmt execution time remains constant (172-191ms) regardless of file count
-- Low variance across runs (standard deviation: 8-23ms)
+```bash
+bundle exec ruby scripts/bench_format.rb
+```
 
-**Test Environment:**
-- CPU: Apple Silicon (arm64)
-- Ruby: 3.4.5
-- rfmt: 0.3.0, RuboCop: 1.81.7
+A cold CLI invocation (`rfmt --check FILE`) takes roughly 0.1-0.25 s of wall-clock time; that is Ruby VM startup, not formatting.
 
-See [detailed benchmark report](docs/benchmark.md) for complete data.
+For more detail and a historical comparison against RuboCop, see [Performance Benchmarks](docs/benchmark.md).
 
 ## Installation
 
 ### Requirements
 
-- Ruby 3.0 or higher
+- Ruby 3.3 or higher
 - Rust 1.70 or higher (for building from source)
 
 ### From RubyGems
@@ -166,6 +158,12 @@ Format multiple files:
 rfmt lib/**/*.rb
 ```
 
+Format all files in your project:
+
+```bash
+rfmt .
+```
+
 Check if files need formatting (CI/CD):
 
 ```bash
@@ -178,12 +176,92 @@ Show diff without modifying files:
 rfmt lib/user.rb --diff
 ```
 
+Quiet mode (minimal output):
+
+```bash
+rfmt --quiet lib/**/*.rb
+```
+
 Enable verbose output for debugging:
 
 ```bash
-rfmt lib/user.rb --verbose
-# or use environment variable
-DEBUG=1 rfmt lib/user.rb
+rfmt --verbose lib/user.rb
+```
+
+#### Common Options
+
+| Option | Description |
+|--------|-------------|
+| `--check` | Check formatting without writing files |
+| `--diff` | Show diff of changes |
+| `--quiet` | Minimal output |
+| `--verbose` | Detailed output with timing |
+
+### Output Modes
+
+**Normal mode** (default):
+```bash
+$ rfmt app/
+Processing 25 file(s)...
+✓ Formatted app/controllers/users_controller.rb
+✓ Formatted app/models/user.rb
+
+✓ Processed 25 files
+  (3 formatted, 22 unchanged)
+```
+
+**Quiet mode** (`--quiet` or `-q`):
+```bash
+$ rfmt --quiet app/
+✓ 3 files formatted
+```
+
+**Verbose mode** (`--verbose` or `-v`):
+```bash
+$ rfmt --verbose app/
+Processing 25 file(s)...
+Using sequential processing for 25 files
+✓ Formatted app/controllers/users_controller.rb  
+✓ app/models/application_record.rb already formatted
+...
+
+✓ Processed 25 files
+  (3 formatted, 22 unchanged)
+
+Details:
+  Total files: 25
+  Total time: 0.45s
+  Files/sec: 55.6
+```
+
+### Parallel Processing
+
+rfmt automatically chooses the optimal processing mode:
+
+- **< 20 files**: Sequential processing (fastest for small batches)  
+- **20-49 files**: Automatic based on average file size
+- **≥ 50 files**: Parallel processing (utilizes multiple cores)
+
+You can override this behavior:
+
+```bash
+# Force parallel processing
+rfmt --parallel app/
+
+# Force sequential processing  
+rfmt --no-parallel app/
+```
+
+### Cache Management
+
+rfmt uses caching to improve performance on large codebases:
+
+```bash
+# Clear cache if needed
+rfmt cache clear
+
+# View cache statistics  
+rfmt cache stats
 ```
 
 ### Ruby API
@@ -276,30 +354,73 @@ end
 
 ## Editor Integration
 
-### Neovim
+rfmt can integrate with editors in two ways:
 
-Format Ruby files on save using autocmd:
+- Standalone LSP: run `rfmt-lsp` directly from your editor. This works well for single
+  Ruby scripts or projects without a Gemfile.
+- Ruby LSP add-on: use rfmt as the formatter inside
+  [Ruby LSP](https://shopify.github.io/ruby-lsp/).
+
+For detailed setup instructions, see [Editor Integration Guide](docs/editors.md).
+
+### Standalone LSP
+
+After installing rfmt, configure your editor's Ruby language server command to `rfmt-lsp`.
+
+```bash
+gem install rfmt
+rfmt-lsp
+```
+
+Example Neovim configuration (with `nvim-lspconfig`):
 
 ```lua
--- ~/.config/nvim/init.lua
+local configs = require("lspconfig.configs")
+local lspconfig = require("lspconfig")
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = { "*.rb", "*.rake", "Gemfile", "Rakefile" },
-  callback = function()
-    local filepath = vim.fn.expand("%:p")
-    local result = vim.fn.system({ "rfmt", filepath })
-    if vim.v.shell_error == 0 then
-      vim.cmd("edit!")
-    end
-  end,
+if not configs.rfmt then
+  configs.rfmt = {
+    default_config = {
+      cmd = { "rfmt-lsp" },
+      filetypes = { "ruby" },
+      root_dir = lspconfig.util.root_pattern(".rfmt.yml", ".git"),
+      single_file_support = true,
+    },
+  }
+end
+
+lspconfig.rfmt.setup({})
+```
+
+Helix, Emacs, and Zed configurations are covered in the
+[Editor Integration Guide](docs/editors.md).
+
+### VSCode (Quick Start)
+
+1. Install [Ruby LSP extension](https://marketplace.visualstudio.com/items?itemName=Shopify.ruby-lsp)
+2. Add to your `settings.json`:
+
+```json
+{
+  "rubyLsp.formatter": "rfmt",
+  "editor.formatOnSave": true,
+  "[ruby]": {
+    "editor.defaultFormatter": "Shopify.ruby-lsp"
+  }
+}
+```
+
+### Neovim
+
+```lua
+require("lspconfig").ruby_lsp.setup({
+  init_options = {
+    formatter = "rfmt"
+  }
 })
 ```
 
-### Coming Soon
-
-- **VS Code** - Extension in development
-- **RubyMine** - Plugin in development
-- **Zed** - Extension in development
+See [Editor Integration Guide](docs/editors.md) for Helix, Emacs, Sublime Text, and more.
 
 ## Development
 

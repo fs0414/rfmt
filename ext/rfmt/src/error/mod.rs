@@ -8,6 +8,18 @@ pub enum RfmtError {
     #[error("Prism integration error: {0}")]
     PrismError(String),
 
+    // Message-only kinds: lib/rfmt.rb rewrites these into its public
+    // exception classes by their [Rfmt::...] prefix, so Display must not
+    // add any wrapper text around the message.
+    #[error("{0}")]
+    ParseError(String),
+
+    #[error("{0}")]
+    ValidationError(String),
+
+    #[error("{message}")]
+    ConfigError { message: String },
+
     #[error("Format error: {0}")]
     FormatError(String),
 
@@ -16,9 +28,6 @@ pub enum RfmtError {
         feature: String,
         explanation: String,
     },
-
-    #[error("Configuration error: {message}")]
-    ConfigError { message: String },
 }
 
 // Implement From for std::fmt::Error
@@ -33,6 +42,8 @@ impl RfmtError {
     pub fn to_magnus_error(&self, ruby: &Ruby) -> MagnusError {
         let exception_class = match self {
             RfmtError::PrismError(_) => "PrismError",
+            RfmtError::ParseError(_) => "ParseError",
+            RfmtError::ValidationError(_) => "ValidationError",
             RfmtError::FormatError(_) => "FormatError",
             RfmtError::UnsupportedFeature { .. } => "UnsupportedFeature",
             RfmtError::ConfigError { .. } => "ConfigError",

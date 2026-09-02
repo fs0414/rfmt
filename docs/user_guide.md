@@ -16,7 +16,7 @@
 
 ### Requirements
 
-- Ruby 3.0 or higher
+- Ruby 3.3 or higher
 - Rust 1.70 or higher (for building from source)
 
 ### Install from RubyGems
@@ -267,23 +267,7 @@ config = {
   }
 }
 
-formatted = Rfmt.format(source, config: config)
-```
-
-### Parse and Inspect AST
-
-```ruby
-require 'rfmt'
-
-source = "class Foo\nend"
-
-# Parse to JSON AST
-ast_json = Rfmt::PrismBridge.parse(source)
-ast = JSON.parse(ast_json)
-
-# Inspect structure
-puts ast['ast']['node_type']  # => "program_node"
-puts ast['comments'].length   # => 0
+formatted = Rfmt.format(source, config_path: '.rfmt.yml')
 ```
 
 ### Error Handling
@@ -521,12 +505,11 @@ pre-commit:
 
 ### What Ruby versions are supported?
 
-rfmt supports **Ruby 3.0 and higher**. We test against:
+rfmt supports **Ruby 3.3 and higher**. We test against:
 
-- Ruby 3.0
-- Ruby 3.1
-- Ruby 3.2
 - Ruby 3.3
+- Ruby 3.4
+- Ruby 4.0
 
 ### How can I contribute?
 

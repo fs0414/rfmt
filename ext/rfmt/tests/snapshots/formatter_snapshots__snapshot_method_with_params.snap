@@ -1,0 +1,7 @@
+---
+source: ext/rfmt/tests/formatter_snapshots.rs
+expression: "format_ruby(\"def greet(name)\\n  puts name\\nend\")"
+---
+def greet(name)
+  puts name
+end
